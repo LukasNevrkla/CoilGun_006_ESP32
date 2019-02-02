@@ -1,14 +1,42 @@
 #pragma once
 
 
+/////////
+//Shoot//
+/////////
+
 #define USED_COILS 1
 #define USED_SENSORS 2
 
 #define ALL_COILS 1
-#define ALL_SENSORS 2
+#define ALL_SENSORS 6
 
-#pragma region CHARGE
+#define START_BY_BUTTON false
 
-	#define CHARGE_FREQUENCY 31000	//HZ
+#define MAX_TIME_FOR_SENSORS 2000000
 
-#pragma endregion
+//////////
+//CHARGE//
+//////////
+
+#define VOLTAGE_TO_CHARGE 30.0
+#define CHARGE_FREQUENCY 31000	//HZ
+#define CHARGE_PWM_ALTERNATE 100
+
+///////////////
+//MEASUREMENT//
+///////////////
+
+#define CAPACITORS_DIVIDER_RESISTOR_1 10000000.0
+#define CAPACITORS_DIVIDER_RESISTOR_2 470000.0
+
+#define CAPACITORS_CONSTANT_A 1.23625
+#define CAPACITORS_CONSTANT_B 3.18795
+
+
+#define BATTERY_DIVIDER_RESISTOR_1 460000.0
+#define BATTERY_DIVIDER_RESISTOR_2 85000.0
+
+#define BATTERY_CONSTANT_A 1.02287
+#define BATTERY_CONSTANT_B 0.109502
+

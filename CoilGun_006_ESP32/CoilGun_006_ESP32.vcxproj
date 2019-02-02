@@ -114,12 +114,16 @@
   <ItemGroup>
     <ClInclude Include="AssistantFile.h" />
     <ClInclude Include="Configuration.h" />
+    <ClInclude Include="Measurement.h" />
     <ClInclude Include="Pins.h" />
+    <ClInclude Include="Sensors.h" />
     <ClInclude Include="States.h" />
     <ClInclude Include="__vm\.CoilGun_006_ESP32.vsarduino.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssistantFile.cpp" />
+    <ClCompile Include="Measurement.cpp" />
+    <ClCompile Include="Sensors.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -14,6 +14,7 @@
 
 
 void PinsInit();
+void SetTimer(uint8_t _timer, uint64_t time, void(*interupt)(), bool reload);
 
 #endif
 

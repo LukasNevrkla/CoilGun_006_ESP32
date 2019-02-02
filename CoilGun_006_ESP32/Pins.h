@@ -7,16 +7,20 @@
 
 #ifdef CG_v1
 
-#define SHOOT_BUTTON 25
-#define CUT_OFF_BUTTON 26
+#define SHOOT_BUTTON 23
+#define CUT_OFF_BUTTON 22
 
-#define CHARGING_TRANSISTOR 34
+#define CHARGING_TRANSISTOR 12
+#define POTENTIOMETER 13
 #define CURRENT_SENSOR 27
 
 #define RELE_1 32
 #define RELE_2 33
 
-const byte COIL[ALL_COILS] = { 32 }; //D2-D7
-const byte SENSOR[ALL_SENSORS] = { 30,31 };
+#define BATTERY_VOLTAGE_SENSOR 26
+#define CAPACITORS_VOLTAGE_SENSOR 25
+
+const byte COIL[USED_COILS] = { 32 }; //D2-D7
+const byte SENSOR[USED_SENSORS] = { 21,19 };
 
 #endif // OLD_CG
