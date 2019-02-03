@@ -1,5 +1,7 @@
 #pragma once
 
+#include "States.h"
+
 
 /////////
 //Shoot//
@@ -11,15 +13,23 @@
 #define ALL_COILS 1
 #define ALL_SENSORS 6
 
-#define START_BY_BUTTON false
+#define START_BY_BUTTON true
 
-#define MAX_TIME_FOR_SENSORS 2000000
+#define MAX_TIME_FOR_SENSORS 3000000
+#define MAX_COILS_ON_TIME 200000
+
+const byte CoilSequence[USED_SENSORS+1] =
+{ 1,COILS_OFF,COILS_OFF};
+
+//If START_BY_BUTTON... first time ll be 0
+const double Distances[USED_SENSORS * 2] =
+{ 0, 0.07, 0.265 - 0.07, 0.07 };	//in meters
 
 //////////
 //CHARGE//
 //////////
 
-#define VOLTAGE_TO_CHARGE 30.0
+#define VOLTAGE_TO_CHARGE 10.0
 #define CHARGE_FREQUENCY 31000	//HZ
 #define CHARGE_PWM_ALTERNATE 100
 

@@ -7,20 +7,18 @@
 #include "WProgram.h"
 #endif
 
-#include "Configuration.h"
-#include "Pins.h"
-
 #include "Arduino.h"
 #include "Configuration.h"
 #include "Pins.h"
 
 
-void SensorsInit(void(*_toCall_interrupt)(byte _sensor), void(*_toCall_end)());
+void SensorsInit(void(*_toCall_interrupt)(byte _sensor), portMUX_TYPE _mux);
 void SensorsStart();
 void SensorsEnd();
-void SensorInterrupt(byte _sensor);
+void IRAM_ATTR SensorInterrupt(byte _sensor);
 
 void CalculateTimes();
+void CalculateSpeeds();
 
 //void(*ToCall)(byte);	//in some mysterious way, can not be declared here
 

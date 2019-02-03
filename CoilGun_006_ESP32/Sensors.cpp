@@ -4,6 +4,8 @@
 void(*ToCall_interrupt)(byte);
 //void(*ToCall_end)();
 
+//portMUX_TYPE mux_second = portMUX_INITIALIZER_UNLOCKED;
+
 void IRAM_ATTR SInt_0() { SensorInterrupt(0); }
 void IRAM_ATTR SInt_1() { SensorInterrupt(1); }
 void IRAM_ATTR SInt_2() { SensorInterrupt(2); }
@@ -15,27 +17,34 @@ void (*sensorInterrupts[ALL_SENSORS])() = { SInt_0,SInt_1,SInt_2,SInt_3,SInt_4, 
 //template<byte _sensor> void IRAM_ATTR SensorInterrupt() { sensorInterrupt(_sensor); }
 
 
-byte expectedSensor=0;
+volatile byte expectedSensor=0;
 unsigned volatile long t = 0;
 unsigned volatile long rawTimes[ALL_SENSORS * 2];
 volatile double resultTimes[ALL_SENSORS * 2];
-//volatile double *allSpeeds;
+volatile double allSpeeds[ALL_SENSORS * 2];
 
 
-void SensorsInit(void(*_toCall_interrupt)(byte _sensor), void(*_toCall_end)())
+
+void SensorsInit(void(*_toCall_interrupt)(byte _sensor), portMUX_TYPE _mux)
 {
 	ToCall_interrupt = _toCall_interrupt;
-	//ToCall_end = _toCall_end;
+	//mux_second = _mux;
 }
 
 void SensorsStart()
 {
+	portMUX_TYPE _mux = portMUX_INITIALIZER_UNLOCKED;
+
+	portENTER_CRITICAL(&_mux);
+
 	expectedSensor = 0;
 
 	for (byte i = 0; i < USED_SENSORS; i++)
 		attachInterrupt(digitalPinToInterrupt(SENSOR[i]), sensorInterrupts[i], RISING);
 
 	t = micros();
+
+	portEXIT_CRITICAL(&_mux);
 }
 
 void SensorsEnd()
@@ -45,26 +54,32 @@ void SensorsEnd()
 		detachInterrupt(digitalPinToInterrupt(SENSOR[i]));
 #endif
 
-	//for (byte i = 0; i < USED_SENSORS*2; i++)
-		//Serial.println(rawTimes[i]);
+	Serial.println("//////////");
+	Serial.println("//Shoot//");
+	Serial.println("//////////");
 
 	CalculateTimes();
+	CalculateSpeeds();
 
 #if !START_BY_BUTTON
 	SensorsStart();
 #endif
 }
 
-void SensorInterrupt(byte _sensor)
+void IRAM_ATTR SensorInterrupt(byte _sensor)
 {
-	//Serial.print("sensor ");
-	//Serial.println(_sensor);
+	//portENTER_CRITICAL_ISR(&mux_second);
 
+	//Serial.println("s ");
+	//Serial.println(_sensor);
+	
 	ToCall_interrupt(_sensor);
 
 	if (_sensor == expectedSensor)
 	{
 		rawTimes[_sensor * 2] = micros();	//Rising edge is even time
+
+		//!!!!!!!!xTaskGetTickCount(); //version of millis() that works from interrupt!!!!!!!!!!!!!!!!!!!
 
 		attachInterrupt(digitalPinToInterrupt(SENSOR[_sensor]), sensorInterrupts[_sensor], FALLING);
 		expectedSensor++;
@@ -80,6 +95,8 @@ void SensorInterrupt(byte _sensor)
 	{
 		rawTimes[_sensor * 2 + 1] = micros();	//Falling edge is odd time
 	}
+
+	//portEXIT_CRITICAL_ISR(&mux_second);
 }
 
 void CalculateTimes()
@@ -99,4 +116,39 @@ void CalculateTimes()
 		resultTimes[i] = time;
 		Serial.println(resultTimes[i],9);
 	}
+}
+
+void CalculateSpeeds()
+{
+	Serial.println("\nSpeeds...\n");
+
+	for (int i = 0; i < USED_SENSORS * 2; i++)
+	{
+		double time_1, time_2, deltaTime, distance, speed;
+
+		if (i == 0)
+			time_1 = 0;
+		else
+			time_1 = resultTimes[i - 1];
+
+		time_2 = resultTimes[i];
+
+		distance = Distances[i];
+		deltaTime= time_2 - time_1;
+
+		//Serial.println();
+		//Serial.println(deltaTime,10);
+
+		if (deltaTime != 0)
+			speed = distance / (time_2 - time_1);
+		else
+			speed = 0;
+
+		//speed /= 100.0; //to m/s from cm/s
+		allSpeeds[i] = speed;
+		Serial.println(allSpeeds[i],10);
+	}
+
+	Serial.println();
+	Serial.println();
 }
