@@ -5,7 +5,7 @@ hw_timer_t * Timers[4] = { NULL,NULL,NULL,NULL };
 void PinsInit()
 {
 	for (byte i = 0; i < ALL_SENSORS; i++)
-		pinMode(SENSOR[i], INPUT);//INPUT_PULLUP);
+		pinMode(SENSOR[i], INPUT_PULLUP);
 
 	for (byte i = 0; i < ALL_COILS; i++)
 	{

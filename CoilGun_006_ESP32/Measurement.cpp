@@ -40,12 +40,12 @@ double GetVoltage(double dividerVoltage, byte divider,bool isReleOpen)
 	case CAPACITORS_DIVIDER:
 		{
 			double voltage = ((double)dividerVoltage)*(CAPACITORS_DIVIDER_RESISTOR_1 + CAPACITORS_DIVIDER_RESISTOR_2) / CAPACITORS_DIVIDER_RESISTOR_2;
-			voltage = voltage * CAPACITORS_CONSTANT_A + CAPACITORS_CONSTANT_B;
+			voltage = voltage * voltage * CAPACITORS_CONSTANT_A + voltage * CAPACITORS_CONSTANT_B + CAPACITORS_CONSTANT_C;
+			//voltage -= 6;//1.0;
+			//if (isReleOpen)
+				//voltage -= 2;//4.54;
 
-			if (isReleOpen)
-				voltage -= 2;//4.54;
-
-			if (voltage == CAPACITORS_CONSTANT_B)
+			if (voltage == CAPACITORS_CONSTANT_C)
 				return 0.0;
 			else
 				return voltage;
@@ -54,4 +54,24 @@ double GetVoltage(double dividerVoltage, byte divider,bool isReleOpen)
 	}
 
 	return 0.0;
+}
+
+double ExactMeasurement()
+{
+#define V_REF 1100  // ADC reference voltage
+
+	// Configure ADC
+	adc1_config_width(ADC_WIDTH_12Bit);
+	adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_11db);
+
+	// Calculate ADC characteristics i.e. gain and offset factors
+	esp_adc_cal_characteristics_t characteristics;
+	esp_adc_cal_get_characteristics(V_REF, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, &characteristics);
+
+	// Read ADC and obtain result in mV
+	uint32_t voltage = adc1_to_voltage(ADC1_CHANNEL_6, &characteristics);
+	//printf("%d mV\n", voltage);
+
+	double v = (double) voltage / 1000.0;
+	return v;
 }

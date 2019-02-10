@@ -115,6 +115,7 @@
     <ClInclude Include="AssistantFile.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="Measurement.h" />
+    <ClInclude Include="NextionDisplay.h" />
     <ClInclude Include="Pins.h" />
     <ClInclude Include="Sensors.h" />
     <ClInclude Include="States.h" />
@@ -123,6 +124,7 @@
   <ItemGroup>
     <ClCompile Include="AssistantFile.cpp" />
     <ClCompile Include="Measurement.cpp" />
+    <ClCompile Include="NextionDisplay.cpp" />
     <ClCompile Include="Sensors.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

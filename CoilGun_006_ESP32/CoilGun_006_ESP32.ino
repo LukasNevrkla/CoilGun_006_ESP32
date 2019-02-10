@@ -1,4 +1,5 @@
 
+#include "NextionDisplay.h"
 #include "Sensors.h"
 #include "Measurement.h"
 #include "AssistantFile.h"
@@ -6,6 +7,7 @@
 
 byte state = WAIT;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+double VoltageToCharge = VOLTAGE_TO_CHARGE;
 
 void setup() 
 {
@@ -24,44 +26,66 @@ void setup()
 #if  !START_BY_BUTTON
 	SensorsStart();
 #endif //  !START_BY_BUTTON
-
 }
 
 
 void loop()
 {
 	if (state == WAIT)
-	{/*
-		Serial.print(MeasurePin(CAPACITORS_VOLTAGE_SENSOR, CAPACITORS_DIVIDER, false));
+	{
+		/*double voltage = 0.0;
+
+		for (int i = 0; i < MEASUREMENTS_SAMPLES; i++)
+			voltage += MeasurePin(CAPACITORS_VOLTAGE_SENSOR, CAPACITORS_DIVIDER, false);
+
+		if (MEASUREMENTS_SAMPLES != 0)
+			voltage /= MEASUREMENTS_SAMPLES;
+		Serial.print("my: ");
+		Serial.println(voltage);
+
+		voltage = 0.0;
+
+		for (int i = 0; i < MEASUREMENTS_SAMPLES; i++)
+			voltage += GetVoltage(ExactMeasurement(), CAPACITORS_DIVIDER, false);
+
+		if (MEASUREMENTS_SAMPLES != 0)
+			voltage /= MEASUREMENTS_SAMPLES;
+		Serial.print("exact: ");
+		Serial.println(voltage);*/
+		
+		/*
 		Serial.print(" \t ");
 		Serial.println(MeasurePin(BATTERY_VOLTAGE_SENSOR, BATTERY_DIVIDER, false));
-
-		delay(1000);*/
+		*/
+		//delay(2000);
 	}
 	else if (state == CHARGE_START)
 	{
 		Serial.print("Starting charging at");
-		Serial.print(VOLTAGE_TO_CHARGE);
+		Serial.print(VoltageToCharge);
 		Serial.println(" V");
 
 		digitalWrite(RELE_1, HIGH);
-		digitalWrite(RELE_2, HIGH);
-		delay(500);
+		digitalWrite(RELE_2, LOW);
+		delay(700);
 		state = CHARGING;
 	}
 	else if (state == CHARGING)
 	{
-		double voltage = MeasurePin(CAPACITORS_VOLTAGE_SENSOR, CAPACITORS_DIVIDER, true);
+		double voltage=0.0;
 
-		//Serial.print(voltage);
-		//Serial.print(" \t ");
-		//Serial.println(MeasurePin(BATTERY_VOLTAGE_SENSOR, BATTERY_DIVIDER, true));
+		for (int i = 0; i < MEASUREMENTS_SAMPLES; i++)
+			voltage+= MeasurePin(CAPACITORS_VOLTAGE_SENSOR, CAPACITORS_DIVIDER, true);
 
-		//delay(500);
+		if (MEASUREMENTS_SAMPLES != 0)
+			voltage /= MEASUREMENTS_SAMPLES;
 
-		if (voltage <= VOLTAGE_TO_CHARGE)
+		Serial.println(voltage);
+
+		delay(100);
+
+		if (voltage <= VoltageToCharge)
 		{
-			//Serial.println("charging");
 			ledcWrite(0, CHARGE_PWM_ALTERNATE);
 		}
 		else
@@ -70,7 +94,7 @@ void loop()
 			ledcWrite(0, 0);
 
 			digitalWrite(RELE_1, LOW);
-			digitalWrite(RELE_2, LOW);
+			digitalWrite(RELE_2, HIGH);
 
 			portENTER_CRITICAL(&mux);
 			state = CHARGE_DONE;
@@ -93,6 +117,7 @@ void loop()
 			
 		SetTimer(1, MAX_TIME_FOR_SENSORS, ShootEnd,false);
 		SetTimer(0, MAX_COILS_ON_TIME, CoilsTimerInterrupt, false);
+		//SetTimer
 		
 		if (CoilSequence[0] != COILS_OFF)
 			digitalWrite(COIL[0], HIGH);
@@ -111,6 +136,7 @@ void loop()
 		for (int i = 0; i < USED_COILS; i++)
 			digitalWrite(COIL[i], LOW);
 
+		digitalWrite(RELE_2, LOW);
 		state = WAIT;
 	}
 	else if (state == EMERGENCY_CUT_OFF)
@@ -172,8 +198,11 @@ void IRAM_ATTR SensorInt(byte _sensor)
 
 	for (int i = 0; i < USED_COILS; i++)
 		digitalWrite(COIL[i], LOW);
-	if (CoilSequence[_sensor+1]!=COILS_OFF)
+	if (CoilSequence[_sensor + 1] != COILS_OFF)
+	{
 		digitalWrite(COIL[_sensor], HIGH);
+		Serial.println("on");
+	}
 
 	portEXIT_CRITICAL_ISR(&mux);
 }

@@ -23,6 +23,8 @@ unsigned volatile long rawTimes[ALL_SENSORS * 2];
 volatile double resultTimes[ALL_SENSORS * 2];
 volatile double allSpeeds[ALL_SENSORS * 2];
 
+volatile bool isSecondTime = false;
+
 
 
 void SensorsInit(void(*_toCall_interrupt)(byte _sensor), portMUX_TYPE _mux)
@@ -61,6 +63,8 @@ void SensorsEnd()
 	CalculateTimes();
 	CalculateSpeeds();
 
+	isSecondTime = false;
+
 #if !START_BY_BUTTON
 	SensorsStart();
 #endif
@@ -68,25 +72,34 @@ void SensorsEnd()
 
 void IRAM_ATTR SensorInterrupt(byte _sensor)
 {
-	//portENTER_CRITICAL_ISR(&mux_second);
-
-	//Serial.println("s ");
-	//Serial.println(_sensor);
+	//unsigned long time = micros();
+	//ToCall_interrupt(_sensor);
 	
-	ToCall_interrupt(_sensor);
+	portMUX_TYPE _mux = portMUX_INITIALIZER_UNLOCKED;
+	portENTER_CRITICAL_ISR(&_mux);
+
+	//Serial.println(_sensor);
 
 	if (_sensor == expectedSensor)
 	{
-		rawTimes[_sensor * 2] = micros();	//Rising edge is even time
-
-		//!!!!!!!!xTaskGetTickCount(); //version of millis() that works from interrupt!!!!!!!!!!!!!!!!!!!
-
-		attachInterrupt(digitalPinToInterrupt(SENSOR[_sensor]), sensorInterrupts[_sensor], FALLING);
-		expectedSensor++;
-
-		if (expectedSensor >= USED_SENSORS)
+		if ((_sensor > 0 && isSecondTime) || _sensor == 0)
 		{
+			ToCall_interrupt(_sensor);
+			rawTimes[_sensor * 2] = micros();	//Rising edge is even time
+
+			//!!!!!!!!xTaskGetTickCount(); //version of millis() that works from interrupt!!!!!!!!!!!!!!!!!!!
+
+			attachInterrupt(digitalPinToInterrupt(SENSOR[_sensor]), sensorInterrupts[_sensor], FALLING);
+			expectedSensor++;
+
+			if (expectedSensor >= USED_SENSORS)
+			{
+			}
+
+			isSecondTime = false;
 		}
+		else if (_sensor > 0 && !isSecondTime)
+			isSecondTime = true;
 	}
 	else if (_sensor > expectedSensor)
 		Serial.println("Sensor error");
@@ -96,21 +109,31 @@ void IRAM_ATTR SensorInterrupt(byte _sensor)
 		rawTimes[_sensor * 2 + 1] = micros();	//Falling edge is odd time
 	}
 
-	//portEXIT_CRITICAL_ISR(&mux_second);
+	portEXIT_CRITICAL_ISR(&_mux);
+	//Serial.println(micros() - time);	//max 10 us
 }
 
 void CalculateTimes()
 {
+	portMUX_TYPE _mux = portMUX_INITIALIZER_UNLOCKED;
+	
+	/*for (int i = 0; i < USED_SENSORS * 2; i++)
+	{
+		Serial.println(rawTimes[i], 9);
+	}*/
+
 	Serial.println("\n\tTimes...");
 	for (int i = 0; i < USED_SENSORS * 2; i++)
 	{
 		double time;
 
+		portENTER_CRITICAL(&_mux);
 	#if START_BY_BUTTON
 		time = (double)(rawTimes[i] - t);
 	#else 
 		time = (double)(rawTimes[i] - rawTimes[0]);	//First time ll be 0
 	#endif
+		portEXIT_CRITICAL(&_mux);
 		time /= 1000000.0;	//To seconds
 
 		resultTimes[i] = time;
