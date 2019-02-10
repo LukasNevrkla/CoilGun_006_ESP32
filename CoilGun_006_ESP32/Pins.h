@@ -20,7 +20,7 @@
 #define BATTERY_VOLTAGE_SENSOR 25
 #define CAPACITORS_VOLTAGE_SENSOR 34
 
-const byte COIL[USED_COILS] = { 4 }; //D2-D7
+const byte COIL[USED_COILS] = { 4,5}; 
 const byte SENSOR[USED_SENSORS] = { 21,19 };
 
 #endif // OLD_CG

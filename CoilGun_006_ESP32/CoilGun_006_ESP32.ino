@@ -26,8 +26,9 @@ void setup()
 #if  !START_BY_BUTTON
 	SensorsStart();
 #endif //  !START_BY_BUTTON
-}
 
+	//digitalWrite(COIL[1], HIGH);
+}
 
 void loop()
 {
@@ -115,8 +116,8 @@ void loop()
 		state = SHOOT;
 		portEXIT_CRITICAL(&mux);
 			
-		SetTimer(1, MAX_TIME_FOR_SENSORS, ShootEnd,false);
-		SetTimer(0, MAX_COILS_ON_TIME, CoilsTimerInterrupt, false);
+		SetTimer(1, MAX_TIME_FOR_SENSORS, ShootEndInterrupt,false);
+		SetTimer(0, MaxCoilTimes[0], CoilsTimerInterrupt, false);
 		//SetTimer
 		
 		if (CoilSequence[0] != COILS_OFF)
@@ -198,16 +199,18 @@ void IRAM_ATTR SensorInt(byte _sensor)
 
 	for (int i = 0; i < USED_COILS; i++)
 		digitalWrite(COIL[i], LOW);
-	if (CoilSequence[_sensor + 1] != COILS_OFF)
+	if (CoilSequence[_sensor + 1] != COILS_OFF && MaxCoilTimes[_sensor + 1] != COILS_OFF)
 	{
-		digitalWrite(COIL[_sensor], HIGH);
-		Serial.println("on");
+		digitalWrite(COIL[_sensor + 1], HIGH);
+		//Serial.println(_sensor);
 	}
+
+	SetTimer(0, MaxCoilTimes[_sensor + 1], CoilsTimerInterrupt, false);
 
 	portEXIT_CRITICAL_ISR(&mux);
 }
 
-void IRAM_ATTR ShootEnd()
+void IRAM_ATTR ShootEndInterrupt()
 {
 	portENTER_CRITICAL_ISR(&mux);
 

@@ -78,7 +78,7 @@ void IRAM_ATTR SensorInterrupt(byte _sensor)
 	portMUX_TYPE _mux = portMUX_INITIALIZER_UNLOCKED;
 	portENTER_CRITICAL_ISR(&_mux);
 
-	//Serial.println(_sensor);
+	Serial.println(_sensor);
 
 	if (_sensor == expectedSensor)
 	{
@@ -95,7 +95,7 @@ void IRAM_ATTR SensorInterrupt(byte _sensor)
 			if (expectedSensor >= USED_SENSORS)
 			{
 			}
-
+			
 			isSecondTime = false;
 		}
 		else if (_sensor > 0 && !isSecondTime)
@@ -117,10 +117,10 @@ void CalculateTimes()
 {
 	portMUX_TYPE _mux = portMUX_INITIALIZER_UNLOCKED;
 	
-	/*for (int i = 0; i < USED_SENSORS * 2; i++)
+	for (int i = 0; i < USED_SENSORS * 2; i++)
 	{
 		Serial.println(rawTimes[i], 9);
-	}*/
+	}
 
 	Serial.println("\n\tTimes...");
 	for (int i = 0; i < USED_SENSORS * 2; i++)
