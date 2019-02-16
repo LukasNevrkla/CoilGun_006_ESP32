@@ -10,32 +10,44 @@
 #define USED_COILS 2
 #define USED_SENSORS 2
 
-#define ALL_COILS 2
+#define ALL_COILS 6
 #define ALL_SENSORS 6
 
 #define START_BY_BUTTON true
 
 #define MAX_TIME_FOR_SENSORS 3000000
-//#define MAX_COILS_ON_TIME 80000
 
 const unsigned long MaxCoilTimes[USED_SENSORS + 1] =
-{ 80000,100000,COILS_OFF };
+{ 60000,80000,COILS_OFF };
 
 const byte CoilSequence[USED_SENSORS+1] =
 { 1,1,COILS_OFF}; 
 
 #define LENGTH  0.039 //0.07
+/*
 //If START_BY_BUTTON... first time ll be 0
 const double Distances[USED_SENSORS * 2] =
-{ 0, LENGTH, 0.2 - LENGTH, LENGTH };	//in meters
+{ 0, LENGTH, 0.2 - LENGTH, LENGTH };	//in meters*/
+
+struct SpeedCalculation
+{
+	byte time_1;
+	byte time_2;
+	double distance;
+};
+
+#define SpeedCalcCNT 3
+
+const SpeedCalculation SpeedCalculations[SpeedCalcCNT] = {
+	{0,1,LENGTH},{2,3,LENGTH},{0,2,0.2} };
 
 //////////
 //CHARGE//
 //////////
 
-#define VOLTAGE_TO_CHARGE 10.0
-#define CHARGE_FREQUENCY 31000	//HZ
-#define CHARGE_PWM_ALTERNATE 100
+#define VOLTAGE_TO_CHARGE 30.0
+#define CHARGE_FREQUENCY 20000//31000//60000	//HZ//nej 20-31khz
+#define CHARGE_PWM_ALTERNATE 130//110
 
 ///////////////
 //MEASUREMENT//

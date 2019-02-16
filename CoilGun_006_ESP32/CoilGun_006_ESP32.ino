@@ -17,8 +17,9 @@ void setup()
 	PinsInit();
 	SensorsInit(&SensorInt, mux);
 
-	attachInterrupt(digitalPinToInterrupt(SHOOT_BUTTON), ShootButton_Interrupt, FALLING);
-	attachInterrupt(digitalPinToInterrupt(CUT_OFF_BUTTON), CutOffButton_Interrupt, FALLING);
+	//attachInterrupt(digitalPinToInterrupt(SHOOT_BUTTON), ShootButton_Interrupt, FALLING);
+	//attachInterrupt(digitalPinToInterrupt(CUT_OFF_BUTTON), CutOffButton_Interrupt, FALLING);
+	attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
 
 	ledcSetup(0, CHARGE_FREQUENCY,8);
 	ledcAttachPin(CHARGING_TRANSISTOR, 0);
@@ -69,7 +70,10 @@ void loop()
 		digitalWrite(RELE_1, HIGH);
 		digitalWrite(RELE_2, LOW);
 		delay(700);
+
+		portENTER_CRITICAL(&mux);
 		state = CHARGING;
+		portEXIT_CRITICAL(&mux);
 	}
 	else if (state == CHARGING)
 	{
@@ -125,7 +129,6 @@ void loop()
 	}
 	else if (state == SHOOT)
 	{
-
 	}
 	else if (state == SHOOT_END)
 	{	
@@ -138,7 +141,10 @@ void loop()
 			digitalWrite(COIL[i], LOW);
 
 		digitalWrite(RELE_2, LOW);
+
+		portENTER_CRITICAL(&mux);
 		state = WAIT;
+		portEXIT_CRITICAL(&mux);
 	}
 	else if (state == EMERGENCY_CUT_OFF)
 	{
@@ -155,6 +161,38 @@ void loop()
 		delay(100);
 	}
 }
+
+void IRAM_ATTR ButtonInterrupt()
+{
+	pinMode(BUTTONS_INTERRUPT_PIN, OUTPUT);
+	detachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN));
+
+	digitalWrite(BUTTONS_INTERRUPT_PIN, HIGH);
+
+	uint16_t raw = 0;
+
+	for (int i=0;i<3;i++)
+		raw += analogRead(BUTTONS_READ_PIN);
+
+	raw /= 3;
+
+	if (raw>900 && raw  <1300)
+		Serial.println("1");
+	else if (raw > 1600 && raw < 2000)
+		Serial.println("2");
+	else if (raw > 2300 && raw < 2600)
+		Serial.println("3");
+	else if (raw > 3000 && raw < 3400)
+		Serial.println("4");
+	else if (raw > 3500 && raw < 3900)
+		Serial.println("5");
+	else
+		Serial.print("");
+
+	pinMode(BUTTONS_INTERRUPT_PIN, INPUT);
+	attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
+}
+
 
 void IRAM_ATTR ShootButton_Interrupt()
 {

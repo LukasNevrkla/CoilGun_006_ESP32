@@ -20,11 +20,10 @@ void (*sensorInterrupts[ALL_SENSORS])() = { SInt_0,SInt_1,SInt_2,SInt_3,SInt_4, 
 volatile byte expectedSensor=0;
 unsigned volatile long t = 0;
 unsigned volatile long rawTimes[ALL_SENSORS * 2];
-volatile double resultTimes[ALL_SENSORS * 2];
-volatile double allSpeeds[ALL_SENSORS * 2];
+double resultTimes[ALL_SENSORS * 2];
+double allSpeeds[SpeedCalcCNT];
 
 volatile bool isSecondTime = false;
-
 
 
 void SensorsInit(void(*_toCall_interrupt)(byte _sensor), portMUX_TYPE _mux)
@@ -51,6 +50,8 @@ void SensorsStart()
 
 void SensorsEnd()
 {
+	portMUX_TYPE _mux = portMUX_INITIALIZER_UNLOCKED;
+
 #if START_BY_BUTTON
 	for (byte i = 0; i < USED_SENSORS; i++)
 		detachInterrupt(digitalPinToInterrupt(SENSOR[i]));
@@ -63,7 +64,9 @@ void SensorsEnd()
 	CalculateTimes();
 	CalculateSpeeds();
 
+	portENTER_CRITICAL(&_mux);
 	isSecondTime = false;
+	portEXIT_CRITICAL(&_mux);
 
 #if !START_BY_BUTTON
 	SensorsStart();
@@ -117,9 +120,16 @@ void CalculateTimes()
 {
 	portMUX_TYPE _mux = portMUX_INITIALIZER_UNLOCKED;
 	
+	portENTER_CRITICAL(&_mux);
+	Serial.println(t, 9);
+	Serial.println();
+	portEXIT_CRITICAL(&_mux);
+
 	for (int i = 0; i < USED_SENSORS * 2; i++)
 	{
+		portENTER_CRITICAL(&_mux);
 		Serial.println(rawTimes[i], 9);
+		portEXIT_CRITICAL(&_mux);
 	}
 
 	Serial.println("\n\tTimes...");
@@ -134,8 +144,8 @@ void CalculateTimes()
 		time = (double)(rawTimes[i] - rawTimes[0]);	//First time ll be 0
 	#endif
 		portEXIT_CRITICAL(&_mux);
-		time /= 1000000.0;	//To seconds
 
+		time /= 1000000.0;	//To seconds
 		resultTimes[i] = time;
 		Serial.println(resultTimes[i],9);
 	}
@@ -143,8 +153,37 @@ void CalculateTimes()
 
 void CalculateSpeeds()
 {
-	Serial.println("\nSpeeds...\n");
+	Serial.println("\nSpeeds between times ...\n");
 
+	for (int i = 0; i < SpeedCalcCNT; i++)
+	{
+		Serial.print("Speed ");
+		Serial.print(i);
+		Serial.print(": ");
+		Serial.print(SpeedCalculations[i].distance);
+		Serial.print(" / time ");
+		Serial.print(SpeedCalculations[i].time_2);
+		Serial.print(" - time ");
+		Serial.println(SpeedCalculations[i].time_1);
+	}
+	Serial.println();
+
+	for (int i = 0; i < SpeedCalcCNT ; i++)
+	{
+		double speed;
+		double deltaTime = resultTimes[SpeedCalculations[i].time_2]
+			- resultTimes[SpeedCalculations[i].time_1];
+
+		if (deltaTime != 0)
+			speed = SpeedCalculations[i].distance / deltaTime;
+		else
+			speed = 0;
+
+		allSpeeds[i] = speed;
+		Serial.println(allSpeeds[i], 10);
+	}
+
+	/*
 	for (int i = 0; i < USED_SENSORS * 2; i++)
 	{
 		double time_1, time_2, deltaTime, distance, speed;
@@ -170,7 +209,7 @@ void CalculateSpeeds()
 		//speed /= 100.0; //to m/s from cm/s
 		allSpeeds[i] = speed;
 		Serial.println(allSpeeds[i],10);
-	}
+	}*/
 
 	Serial.println();
 	Serial.println();
