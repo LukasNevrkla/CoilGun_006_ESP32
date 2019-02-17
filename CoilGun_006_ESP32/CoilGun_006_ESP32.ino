@@ -15,10 +15,9 @@ void setup()
 	Serial.println("Init");
 
 	PinsInit();
+
 	SensorsInit(&SensorInt, mux);
 
-	//attachInterrupt(digitalPinToInterrupt(SHOOT_BUTTON), ShootButton_Interrupt, FALLING);
-	//attachInterrupt(digitalPinToInterrupt(CUT_OFF_BUTTON), CutOffButton_Interrupt, FALLING);
 	attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
 
 	ledcSetup(0, CHARGE_FREQUENCY,8);
@@ -27,8 +26,6 @@ void setup()
 #if  !START_BY_BUTTON
 	SensorsStart();
 #endif //  !START_BY_BUTTON
-
-	//digitalWrite(COIL[1], HIGH);
 }
 
 void loop()
@@ -54,12 +51,29 @@ void loop()
 			voltage /= MEASUREMENTS_SAMPLES;
 		Serial.print("exact: ");
 		Serial.println(voltage);*/
-		
 		/*
-		Serial.print(" \t ");
-		Serial.println(MeasurePin(BATTERY_VOLTAGE_SENSOR, BATTERY_DIVIDER, false));
+		Serial.println("RAW");
+
+		Serial.print(GetDividerVoltage(analogRead(CAPACITORS_VOLTAGE_SENSOR)));
+		Serial.print("  \t "); 
+		Serial.println(GetDividerVoltage(analogRead(BATTERY_VOLTAGE_SENSOR)));
 		*/
-		//delay(2000);
+		/*
+		double voltage = 0.0;
+
+		for (int i = 0; i < MEASUREMENTS_SAMPLES; i++)
+			voltage += MeasurePin(CAPACITORS_VOLTAGE_SENSOR, CAPACITORS_DIVIDER, true);
+
+		if (MEASUREMENTS_SAMPLES != 0)
+			voltage /= MEASUREMENTS_SAMPLES;
+
+		Serial.println(voltage);*/
+		
+		//Serial.print(MeasurePin(CAPACITORS_VOLTAGE_SENSOR, CAPACITORS_DIVIDER, false));
+		//Serial.print(" \t ");
+		//Serial.println(MeasurePin(BATTERY_VOLTAGE_SENSOR, BATTERY_DIVIDER, false));
+		
+		//delay(1000);
 	}
 	else if (state == CHARGE_START)
 	{
@@ -67,9 +81,10 @@ void loop()
 		Serial.print(VoltageToCharge);
 		Serial.println(" V");
 
-		digitalWrite(RELE_1, HIGH);
-		digitalWrite(RELE_2, LOW);
-		delay(700);
+		digitalWrite(SHIFT_REG_1_MR, HIGH);
+		shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, LSBFIRST, 0b11000000);
+
+		delay(500);
 
 		portENTER_CRITICAL(&mux);
 		state = CHARGING;
@@ -98,8 +113,9 @@ void loop()
 			Serial.println("CHARGE COMPLETE");
 			ledcWrite(0, 0);
 
-			digitalWrite(RELE_1, LOW);
-			digitalWrite(RELE_2, HIGH);
+			//digitalWrite(RELE_1, LOW);
+			//digitalWrite(RELE_2, HIGH);
+			shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, LSBFIRST, 0b00000000);
 
 			portENTER_CRITICAL(&mux);
 			state = CHARGE_DONE;
@@ -116,6 +132,9 @@ void loop()
 #if START_BY_BUTTON
 		SensorsStart();		
 #endif
+
+		shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, MSBFIRST, 0b00000000);
+
 		portENTER_CRITICAL(&mux);
 		state = SHOOT;
 		portEXIT_CRITICAL(&mux);
@@ -157,6 +176,8 @@ void loop()
 
 		ledcWrite(0, 0);
 
+		shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, LSBFIRST, 0b00000000);
+
 		Serial.println("EMERGENCY_CUT_OFF");
 		delay(100);
 	}
@@ -171,15 +192,16 @@ void IRAM_ATTR ButtonInterrupt()
 
 	uint16_t raw = 0;
 
-	for (int i=0;i<3;i++)
+	for (int i = 0; i < 3; i++)
 		raw += analogRead(BUTTONS_READ_PIN);
 
 	raw /= 3;
 
-	if (raw>900 && raw  <1300)
-		Serial.println("1");
+	portENTER_CRITICAL_ISR(&mux);
+	if (raw > 900 && raw < 1300)
+		state = CHARGE_START;
 	else if (raw > 1600 && raw < 2000)
-		Serial.println("2");
+		state = EMERGENCY_CUT_OFF;
 	else if (raw > 2300 && raw < 2600)
 		Serial.println("3");
 	else if (raw > 3000 && raw < 3400)
@@ -188,6 +210,8 @@ void IRAM_ATTR ButtonInterrupt()
 		Serial.println("5");
 	else
 		Serial.print("");
+
+	portEXIT_CRITICAL_ISR(&mux);
 
 	pinMode(BUTTONS_INTERRUPT_PIN, INPUT);
 	attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);

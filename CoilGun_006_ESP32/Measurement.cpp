@@ -25,10 +25,10 @@ double GetVoltage(double dividerVoltage, byte divider,bool isReleOpen)
 		case BATTERY_DIVIDER:
 		{
 			double voltage = (double)(dividerVoltage*(BATTERY_DIVIDER_RESISTOR_1 + BATTERY_DIVIDER_RESISTOR_2)) / BATTERY_DIVIDER_RESISTOR_2;
-			voltage = voltage * BATTERY_CONSTANT_A + BATTERY_CONSTANT_B;
+			//voltage = voltage * BATTERY_CONSTANT_A + BATTERY_CONSTANT_B;
 
-			if (isReleOpen)
-				voltage += 0.1;
+			//if (isReleOpen)
+				//voltage += 0.1;
 
 			if (voltage == BATTERY_CONSTANT_B)
 				return 0.0;
