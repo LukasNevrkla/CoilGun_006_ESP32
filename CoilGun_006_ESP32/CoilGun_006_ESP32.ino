@@ -1,9 +1,18 @@
 
+//#include <BluetoothSerial.h>
+#include "Bluetooth.h"
 #include "NextionDisplay.h"
 #include "Sensors.h"
 #include "Measurement.h"
 #include "AssistantFile.h"
 #include "States.h"
+
+//BluetoothSerial SerialBT;
+/*
+void BluetoothPrint()
+{
+	SerialBT.println("DFdf");
+}*/
 
 byte state = WAIT;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
@@ -17,11 +26,22 @@ void setup()
 	PinsInit();
 
 	SensorsInit(&SensorInt, mux);
+	//SerialBT.begin("ESP32");
+	//BluetoothInit();
 
 	attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
 
 	ledcSetup(0, CHARGE_FREQUENCY,8);
 	ledcAttachPin(CHARGING_TRANSISTOR, 0);
+	/*
+	digitalWrite(SHIFT_REG_0_MR, HIGH);
+	digitalWrite(SHIFT_REG_0_DATA, HIGH);
+	digitalWrite(SHIFT_REG_0_CLC, HIGH);
+
+	digitalWrite(SHIFT_REG_0_DATA, LOW);
+	digitalWrite(SHIFT_REG_0_CLC, LOW);
+	*/
+	//shiftOut(SHIFT_REG_0_DATA, SHIFT_REG_0_CLC,LSBFIRST, 0b11000000);
 
 #if  !START_BY_BUTTON
 	SensorsStart();
@@ -30,6 +50,10 @@ void setup()
 
 void loop()
 {
+	//BluetoothSendTxt("hello");
+	//BluetoothPrint();
+	delay(1000);
+
 	if (state == WAIT)
 	{
 		/*double voltage = 0.0;
@@ -138,28 +162,35 @@ void loop()
 		portENTER_CRITICAL(&mux);
 		state = SHOOT;
 		portEXIT_CRITICAL(&mux);
+
+		digitalWrite(SHIFT_REG_0_MR, HIGH);
+		digitalWrite(SHIFT_REG_0_DATA, HIGH);
 			
 		SetTimer(1, MAX_TIME_FOR_SENSORS, ShootEndInterrupt,false);
 		SetTimer(0, MaxCoilTimes[0], CoilsTimerInterrupt, false);
-		//SetTimer
 		
 		if (CoilSequence[0] != COILS_OFF)
-			digitalWrite(COIL[0], HIGH);
+			digitalWrite(SHIFT_REG_0_CLC, HIGH);
+			//digitalWrite(COIL[0], HIGH);
+
+		digitalWrite(SHIFT_REG_0_CLC, LOW);
+		digitalWrite(SHIFT_REG_0_DATA, LOW);
 	}
 	else if (state == SHOOT)
 	{
 	}
 	else if (state == SHOOT_END)
 	{	
-		for (int i = 0; i < USED_COILS; i++)
-			digitalWrite(COIL[i], LOW);
+		//for (int i = 0; i < USED_COILS; i++)
+			//digitalWrite(COIL[i], LOW);
+		digitalWrite(SHIFT_REG_0_MR, LOW);
 
 		SensorsEnd();
 
-		for (int i = 0; i < USED_COILS; i++)
-			digitalWrite(COIL[i], LOW);
+		//for (int i = 0; i < USED_COILS; i++)
+			//digitalWrite(COIL[i], LOW);
 
-		digitalWrite(RELE_2, LOW);
+		//digitalWrite(RELE_2, LOW);
 
 		portENTER_CRITICAL(&mux);
 		state = WAIT;
@@ -167,12 +198,14 @@ void loop()
 	}
 	else if (state == EMERGENCY_CUT_OFF)
 	{
+		digitalWrite(SHIFT_REG_0_MR, LOW);
+
 		portENTER_CRITICAL(&mux);
 		state = WAIT;
 		portEXIT_CRITICAL(&mux);
 
-		for (int i = 0; i < USED_COILS; i++)
-			digitalWrite(COIL[i], LOW);
+		//for (int i = 0; i < USED_COILS; i++)
+			//digitalWrite(COIL[i], LOW);
 
 		ledcWrite(0, 0);
 
@@ -199,7 +232,12 @@ void IRAM_ATTR ButtonInterrupt()
 
 	portENTER_CRITICAL_ISR(&mux);
 	if (raw > 900 && raw < 1300)
-		state = CHARGE_START;
+	{
+		if (state==WAIT)
+			state = CHARGE_START;
+		else if (state==CHARGE_DONE)
+			state = SHOOT_START;
+	}
 	else if (raw > 1600 && raw < 2000)
 		state = EMERGENCY_CUT_OFF;
 	else if (raw > 2300 && raw < 2600)
@@ -216,8 +254,7 @@ void IRAM_ATTR ButtonInterrupt()
 	pinMode(BUTTONS_INTERRUPT_PIN, INPUT);
 	attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
 }
-
-
+/*
 void IRAM_ATTR ShootButton_Interrupt()
 {
 	portENTER_CRITICAL_ISR(&mux);
@@ -247,7 +284,7 @@ void IRAM_ATTR CutOffButton_Interrupt()
 	state = EMERGENCY_CUT_OFF;
 	portEXIT_CRITICAL_ISR(&mux);
 }
-
+*/
 void IRAM_ATTR SensorInt(byte _sensor)
 {
 	portENTER_CRITICAL_ISR(&mux);
@@ -259,12 +296,13 @@ void IRAM_ATTR SensorInt(byte _sensor)
 
 	//Serial.println("coils int");
 
-	for (int i = 0; i < USED_COILS; i++)
-		digitalWrite(COIL[i], LOW);
+	//for (int i = 0; i < USED_COILS; i++)
+		//digitalWrite(COIL[i], LOW);
 	if (CoilSequence[_sensor + 1] != COILS_OFF && MaxCoilTimes[_sensor + 1] != COILS_OFF)
 	{
-		digitalWrite(COIL[_sensor + 1], HIGH);
-		//Serial.println(_sensor);
+		//digitalWrite(COIL[_sensor + 1], HIGH);
+		digitalWrite(SHIFT_REG_0_CLC, HIGH);
+		digitalWrite(SHIFT_REG_0_CLC, LOW);
 	}
 
 	SetTimer(0, MaxCoilTimes[_sensor + 1], CoilsTimerInterrupt, false);
@@ -287,8 +325,10 @@ void IRAM_ATTR CoilsTimerInterrupt()
 
 	Serial.println("COILS_OFF");
 	
-	for (int i = 0; i < USED_COILS; i++)
-		digitalWrite(COIL[i], LOW);
+	digitalWrite(SHIFT_REG_0_MR, LOW);
+
+	//for (int i = 0; i < USED_COILS; i++)
+		//digitalWrite(COIL[i], LOW);
 
 	portEXIT_CRITICAL_ISR(&mux);
 }

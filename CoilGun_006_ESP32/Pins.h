@@ -14,7 +14,7 @@ const byte SENSOR[ALL_SENSORS] = { 23,22,1,3,21,19 };
 #define BUTTONS_READ_PIN 35
 
 //COILS
-#define SHIFT_REG_0_DATA 38
+#define SHIFT_REG_0_DATA 33
 #define SHIFT_REG_0_MR 25
 #define SHIFT_REG_0_CLC 26
 
