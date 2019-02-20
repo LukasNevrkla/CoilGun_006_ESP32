@@ -15,7 +15,7 @@
 
 #define START_BY_BUTTON true
 
-#define MAX_TIME_FOR_SENSORS 3000000
+#define MAX_TIME_FOR_SENSORS 1000000
 
 const unsigned long MaxCoilTimes[USED_SENSORS + 1] =
 { 60000,30000,COILS_OFF };
@@ -40,9 +40,18 @@ const SpeedCalculation SpeedCalculations[SpeedCalcCNT] = {
 //CHARGE//
 //////////
 
-#define VOLTAGE_TO_CHARGE 23.0
+#define PREDEFINED_VOLTAGE_TO_CHARGE 23.0
 #define CHARGE_FREQUENCY 20000//31000//60000	//HZ//nej 20-31khz
 #define CHARGE_PWM_ALTERNATE 130//110
+
+/////////////////
+//STEPPER MOTOR//
+/////////////////
+
+#define STEP_CNT 150
+#define STEPPER_START_DIRECTION FORWARD
+#define STEP_FREQUENCY 700 //Hz (max. 250kHz)
+
 
 ///////////////
 //MEASUREMENT//

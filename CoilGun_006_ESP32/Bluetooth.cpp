@@ -2,76 +2,49 @@
 
 #include "Bluetooth.h"
 
-
-
-/*
-void Callbacks::OnWrite(BLECharacteristic * pCharacteristic)
-{
-	receivedMessage = pCharacteristic->getValue();
-
-	if (receivedMessage.length() > 0)
-	{
-		Serial.println("Prijata zprava: ");
-		for (int i = 0; i < receivedMessage.length(); i++) 
-			Serial.print(receivedMessage[i]);
-
-		Serial.println();
-	}
-}
-
-void BluetoothInit()
-{
-	BLEDevice::init("CoilGun Bluetooth");
-	BLEServer *pServer = BLEDevice::createServer();
-	pServer->setCallbacks(new ServerCallbacks());
-	BLEService *pService = pServer->createService(SERVICE_UUID);
-	pCharacteristic = pService->createCharacteristic(
-		CHARACTERISTIC_UUID_TX,
-		BLECharacteristic::PROPERTY_NOTIFY
-	);
-	pCharacteristic->addDescriptor(new BLE2902());
-	BLECharacteristic *pCharacteristic = pService->createCharacteristic(
-		CHARACTERISTIC_UUID_RX,
-		BLECharacteristic::PROPERTY_WRITE
-	);
-	pCharacteristic->setCallbacks(new Callbacks());
-	pService->start();
-
-	pServer->getAdvertising()->start();
-	Serial.println("Bluetooth ready...");
-}
-
-void BluetoothSendTxt(String txt)
-{
-	if (deviceConnected == true)
-	{
-		char *txtChar;// [txt.length() + 1];
-		txt.toCharArray(txtChar, txt.length() + 1);
-		pCharacteristic->setValue(txtChar);
-
-		pCharacteristic->notify();
-		Serial.print("*** Odeslana zprava: ");
-		Serial.print(txtChar);
-	}
-}
-*/
-
 BluetoothSerial SerialBT;
+int lastData[2];
+//extern double VoltageToCharge;
 
 void BluetoothInit()
 {
-	if (!SerialBT.begin("CoilGun Bluetooth")) 
-		Serial.println("An error occurred initializing Bluetooth");
-	else 
-		Serial.println("Bluetooth initialized");
+	SerialBT.begin("CoilGun Bluetooth");
 }
 
-void BluetoothPrintTxt()
+void BluetoothPrintTxt(String txt)
 {
+	SerialBT.println(txt);
 }
 
-void callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
-	if (event == ESP_SPP_SRV_OPEN_EVT) {
-		Serial.println("Client Connected");
+void BluetoothHandle()
+{
+	if (SerialBT.available()) //Check if we receive anything from Bluetooth
+	{
+		int data = SerialBT.read();
+		//Serial.println(data);
+
+		if (data == 'v')	//Format: xxv
+		{
+			String value = "";
+
+			if (isDigit(lastData[0]) && isDigit(lastData[1])) 
+			{
+				//Cant be like this: value += (char)lastData[0] + (char)lastData[1];
+				value += (char)lastData[0];
+				value += (char)lastData[1];
+
+				int data = value.toInt();
+
+				EEPROM.write(EEPROM_VOLTAGE_ADRESS, data);
+				EEPROM.commit();
+
+				String txt = "Voltage to charge: " + String(data) + " V";
+				Serial.println(txt);
+				BluetoothPrintTxt(txt);
+			}		
+		}
+
+		lastData[0] = lastData[1];
+		lastData[1] = data;
 	}
 }

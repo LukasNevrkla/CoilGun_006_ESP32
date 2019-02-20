@@ -128,11 +128,13 @@ void CalculateTimes()
 	for (int i = 0; i < USED_SENSORS * 2; i++)
 	{
 		portENTER_CRITICAL(&_mux);
-		Serial.println(rawTimes[i], 9);
+		//Serial.println(rawTimes[i], 9);
 		portEXIT_CRITICAL(&_mux);
 	}
 
 	Serial.println("\n\tTimes...");
+	BluetoothPrintTxt("Times...");
+
 	for (int i = 0; i < USED_SENSORS * 2; i++)
 	{
 		double time;
@@ -147,13 +149,19 @@ void CalculateTimes()
 
 		time /= 1000000.0;	//To seconds
 		resultTimes[i] = time;
+
 		Serial.println(resultTimes[i],9);
+		BluetoothPrintTxt(String(resultTimes[i] * 1000, 3) + " ms");
+		delay(20);
 	}
+
+	BluetoothPrintTxt("");
 }
 
 void CalculateSpeeds()
 {
 	Serial.println("\nSpeeds between times ...\n");
+	BluetoothPrintTxt("Speeds...");
 
 	for (int i = 0; i < SpeedCalcCNT; i++)
 	{
@@ -181,36 +189,14 @@ void CalculateSpeeds()
 
 		allSpeeds[i] = speed;
 		Serial.println(allSpeeds[i], 10);
+
+		BluetoothPrintTxt(String(allSpeeds[i], 3) + " m/s");
+		delay(10);
 	}
 
-	/*
-	for (int i = 0; i < USED_SENSORS * 2; i++)
-	{
-		double time_1, time_2, deltaTime, distance, speed;
-
-		if (i == 0)
-			time_1 = 0;
-		else
-			time_1 = resultTimes[i - 1];
-
-		time_2 = resultTimes[i];
-
-		distance = Distances[i];
-		deltaTime= time_2 - time_1;
-
-		//Serial.println();
-		//Serial.println(deltaTime,10);
-
-		if (deltaTime != 0)
-			speed = distance / (time_2 - time_1);
-		else
-			speed = 0;
-
-		//speed /= 100.0; //to m/s from cm/s
-		allSpeeds[i] = speed;
-		Serial.println(allSpeeds[i],10);
-	}*/
-
 	Serial.println();
 	Serial.println();
+
+	BluetoothPrintTxt("");
+	BluetoothPrintTxt("");
 }

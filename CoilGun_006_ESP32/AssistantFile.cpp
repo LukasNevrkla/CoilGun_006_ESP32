@@ -1,6 +1,7 @@
 #include "AssistantFile.h"
 
 hw_timer_t * Timers[4] = { NULL,NULL,NULL,NULL };
+//double VoltageToCharge = PREDEFINED_VOLTAGE_TO_CHARGE;
 
 void PinsInit()
 {
@@ -25,23 +26,38 @@ void PinsInit()
 	pinMode(SHIFT_REG_1_MR, OUTPUT);
 
 	digitalWrite(SHIFT_REG_0_MR, LOW);
-	digitalWrite(SHIFT_REG_1_MR, LOW);
-
-	//pinMode(SHOOT_BUTTON, INPUT_PULLUP);
-	//pinMode(CUT_OFF_BUTTON, INPUT_PULLUP);
+	digitalWrite(SHIFT_REG_1_MR, HIGH);
 
 	pinMode(CURRENT_SENSOR, INPUT);
+	pinMode(STEPPER_MOTOR, OUTPUT);
 
 	pinMode(CHARGING_TRANSISTOR, OUTPUT);
 	digitalWrite(CHARGING_TRANSISTOR, LOW);
 
-	//pinMode(POTENTIOMETER, INPUT);
-
-	pinMode(RELE_1, OUTPUT);
-	pinMode(RELE_2, OUTPUT);
-
 	pinMode(BATTERY_VOLTAGE_SENSOR, INPUT_PULLDOWN);
 	pinMode(CAPACITORS_VOLTAGE_SENSOR, INPUT_PULLDOWN);
+}
+
+void EEPROM_Init()
+{
+	EEPROM.begin(EEPROM_SIZE);
+
+	byte voltage = EEPROM.read(EEPROM_VOLTAGE_ADRESS);
+
+	if (!(voltage > 0 && voltage < 80))
+	{
+		EEPROM.write(EEPROM_VOLTAGE_ADRESS, PREDEFINED_VOLTAGE_TO_CHARGE);
+		EEPROM.commit();
+	}
+}
+
+void PWM_Init()
+{
+	ledcSetup(CAPACITOR_CHARGER_PWM_CHANNEL, CHARGE_FREQUENCY, 8);
+	ledcAttachPin(CHARGING_TRANSISTOR, CAPACITOR_CHARGER_PWM_CHANNEL);
+
+	ledcSetup(STEPPER_MOTOR_CHANNEL, STEP_FREQUENCY, 8);
+	ledcAttachPin(STEPPER_MOTOR, STEPPER_MOTOR_CHANNEL);
 }
 
 void SetTimer(uint8_t _timer, uint64_t time, void(*interupt)(), bool reload)

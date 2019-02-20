@@ -10,6 +10,7 @@
 #include "Arduino.h"
 #include "Configuration.h"
 #include "Pins.h"
+#include "Bluetooth.h"
 
 
 void SensorsInit(void(*_toCall_interrupt)(byte _sensor), portMUX_TYPE _mux);
