@@ -55,9 +55,34 @@ void PWM_Init()
 {
 	ledcSetup(CAPACITOR_CHARGER_PWM_CHANNEL, CHARGE_FREQUENCY, 8);
 	ledcAttachPin(CHARGING_TRANSISTOR, CAPACITOR_CHARGER_PWM_CHANNEL);
+}
+
+bool MotorInit(byte &shiftRegister)
+{
+	shiftRegister |= 1 << 4;	//Motor microstepping
+	shiftRegister &= ~(1 << 5);	//Motor sleep on
+
+	shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, MSBFIRST, shiftRegister);
 
 	ledcSetup(STEPPER_MOTOR_CHANNEL, STEP_FREQUENCY, 8);
 	ledcAttachPin(STEPPER_MOTOR, STEPPER_MOTOR_CHANNEL);
+
+	return true;
+	/*
+	pinMode(BUTTONS_INTERRUPT_PIN, OUTPUT);
+	//detachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN));
+	digitalWrite(BUTTONS_INTERRUPT_PIN, HIGH);
+	 
+	int data = analogRead(BUTTONS_READ_PIN);
+	if (data > 2300 && data < 3300)
+		return false;
+	else
+		return true;
+
+	Serial.println(analogRead(BUTTONS_READ_PIN));
+
+	pinMode(BUTTONS_INTERRUPT_PIN, INPUT);*/
+	//attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
 }
 
 void SetTimer(uint8_t _timer, uint64_t time, void(*interupt)(), bool reload)
@@ -67,5 +92,28 @@ void SetTimer(uint8_t _timer, uint64_t time, void(*interupt)(), bool reload)
 	timerAttachInterrupt(Timers[_timer], interupt, true);
 	timerAlarmWrite(Timers[_timer], time, reload);
 	timerAlarmEnable(Timers[_timer]);
+}
+
+void MotorStart(bool _direction, byte &shiftRegister, double stepFrequency)
+{
+	shiftRegister |= 1 << 5;	//Motor sleep off
+
+	if (_direction == FORWARD)	//Motor dir
+		shiftRegister |= 1 << 3;
+	else
+		shiftRegister &= ~(1 << 3);
+
+	shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, MSBFIRST, shiftRegister);
+
+	ledcSetup(STEPPER_MOTOR_CHANNEL, stepFrequency, 8);
+	ledcAttachPin(STEPPER_MOTOR, STEPPER_MOTOR_CHANNEL);
+	ledcWrite(STEPPER_MOTOR_CHANNEL, 126);
+}
+void MotorStop(byte &shiftRegister)
+{
+	shiftRegister &= ~(1 << 5);	//Motor sleep on
+
+	shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, MSBFIRST, shiftRegister);
+	ledcWrite(STEPPER_MOTOR_CHANNEL, 0);
 }
 

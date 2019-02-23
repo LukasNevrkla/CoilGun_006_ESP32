@@ -15,6 +15,8 @@
 #define MOTOR_MOVING 8
 #define EMERGENCY_CUT_OFF 9
 
+#define MOTOR_CALIBRATION 10
+
 ////////////
 //DIVIDERS//
 ////////////

@@ -18,7 +18,7 @@
 #define MAX_TIME_FOR_SENSORS 1000000
 
 const unsigned long MaxCoilTimes[USED_SENSORS + 1] =
-{ 60000,30000,COILS_OFF };
+{ 70000,30000,COILS_OFF };
 
 const byte CoilSequence[USED_SENSORS+1] =
 { 1,1,COILS_OFF}; 
@@ -51,6 +51,7 @@ const SpeedCalculation SpeedCalculations[SpeedCalcCNT] = {
 #define STEP_CNT 150
 #define STEPPER_START_DIRECTION FORWARD
 #define STEP_FREQUENCY 700 //Hz (max. 250kHz)
+#define STEP_SLOW_FREQUENCY 400 //Hz (max. 250kHz)
 
 
 ///////////////
