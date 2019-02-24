@@ -15,25 +15,38 @@ bool projectileCharged = false;
 
 void setup() 
 {
-	Serial.begin(9600);
+	Serial.begin(115200);
 	Serial.println("Init");
 
 	PinsInit();
 	EEPROM_Init();
 	PWM_Init();
-
-	if (MotorInit(shiftRegister_1));	//Motor is not in base position
-	{
-		MotorStart(BACKWARD, shiftRegister_1, STEP_SLOW_FREQUENCY);
-		portENTER_CRITICAL(&mux);
-		state = MOTOR_CALIBRATION;
-		portEXIT_CRITICAL(&mux);
-	}
+	MotorInit(shiftRegister_1);
 
 	SensorsInit(&SensorInt, mux);
 	BluetoothInit();
 
 	attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
+	attachInterrupt(digitalPinToInterrupt(PRESSED_BUTTON_SIG), PressedButtonInterrupt, FALLING);
+
+	if (digitalRead(PRESSED_BUTTON_SIG)==HIGH)//(!IsButtonPressed())	//Motor is not in base position
+	{
+		String txt = "Motor calibration";
+		Serial.println(txt);
+		BluetoothPrintTxt(txt);
+
+		MotorStart(BACKWARD, shiftRegister_1, STEP_SLOW_FREQUENCY);
+
+		portENTER_CRITICAL(&mux);
+		state = MOTOR_CALIBRATION;
+		portEXIT_CRITICAL(&mux);
+	}
+	else
+	{
+		String txt = "Motor calibrated";
+		Serial.println(txt);
+		BluetoothPrintTxt(txt);
+	}
 
 #if  !START_BY_BUTTON
 	SensorsStart();
@@ -261,10 +274,6 @@ void loop()
 		ledcWrite(CAPACITOR_CHARGER_PWM_CHANNEL, 0);
 		ledcWrite(STEPPER_MOTOR_CHANNEL, 0);
 
-		portENTER_CRITICAL(&mux);
-		state = WAIT;
-		portEXIT_CRITICAL(&mux);
-
 		shiftRegister_1 = 0;
 		shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, LSBFIRST, shiftRegister_1);
 
@@ -272,6 +281,10 @@ void loop()
 		Serial.println(txt);
 		BluetoothPrintTxt(txt);
 		delay(100);
+
+		portENTER_CRITICAL(&mux);
+		state = WAIT;
+		portEXIT_CRITICAL(&mux);
 	}
 	else if (state == MOTOR_CALIBRATION)
 	{
@@ -294,83 +307,78 @@ void IRAM_ATTR ButtonInterrupt()
 
 	raw /= samples;
 
-	Serial.println(raw);
+	//Serial.println(raw);
 
 	portENTER_CRITICAL_ISR(&mux);
 	if (raw > 900 && raw < 1300)
 	{
+		Serial.println("SHOOT");
 		if (state==WAIT)
 			state = CHARGE_START;
 		else if (state==CHARGE_DONE)
 			state = SHOOT_START;
 	}
 	else if (raw > 1600 && raw < 2000)
-		state = EMERGENCY_CUT_OFF;
-	else if (raw > 2300 && raw < 3300)	//Stepper end-stop
 	{
-		Serial.println("xx");
-		Serial.println(state);
-
+		Serial.println("CUTT OFF");
+		state = EMERGENCY_CUT_OFF;
+	}
+	else if (raw > 2300 && raw < 3300)	//Stepper end-stop
+	{/*
 		if (state == MOTOR_CALIBRATION)
 		{
 			MotorStop(shiftRegister_1);
-			Serial.println("M cal");
+			
+			String txt = "Motor calibrated";
+			Serial.println(txt);
+			BluetoothPrintTxt(txt);
 
 			state = WAIT;
-		}
+		}*/
 	}
 	else if (raw > 3300 && raw < 3400)
 		Serial.println("4");
 	else if (raw > 3500 && raw < 3900)
 		Serial.println("5");
 	else
-	{
-		if (state == MOTOR_CALIBRATION)
+	{/*
+		if (state == MOTOR_CALIBRATION)	//Some error
 		{
 			MotorStop(shiftRegister_1);
-			Serial.println("M cal 2");
+
+			String txt = "Motor calibrated 2";
+			Serial.println(txt);
+			BluetoothPrintTxt(txt);
 
 			state = WAIT;
-		}
+		}*/
 	}
 		//Serial.print("");
 
+
 	portEXIT_CRITICAL_ISR(&mux);
 
+	//digitalWrite(BUTTONS_INTERRUPT_PIN, LOW);
 	pinMode(BUTTONS_INTERRUPT_PIN, INPUT);
 	attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
 }
-/*
-void IRAM_ATTR ShootButton_Interrupt()
+
+void IRAM_ATTR PressedButtonInterrupt()
 {
-	portENTER_CRITICAL_ISR(&mux);
-	if (state == WAIT)
+	if (state == MOTOR_CALIBRATION)
 	{
-		state = CHARGE_START;
+		MotorStop(shiftRegister_1);
+
+		String txt = "Motor calibrated";
+		Serial.println(txt);
+		BluetoothPrintTxt(txt);
+
+		portENTER_CRITICAL_ISR(&mux);
+		state = WAIT;
+		portEXIT_CRITICAL_ISR(&mux);
 	}
-	else if (state == CHARGE_DONE)
-	{
-		state = SHOOT_START;
-	}
-	portEXIT_CRITICAL_ISR(&mux);
 }
 
-void IRAM_ATTR CutOffButton_Interrupt()
-{
-	portENTER_CRITICAL_ISR(&mux);
-
-	digitalWrite(RELE_1, LOW);
-	digitalWrite(RELE_2, LOW);
-
-	for (int i = 0; i < USED_COILS; i++)
-		digitalWrite(COIL[i], LOW);
-
-	ledcWrite(0, 0);
-
-	state = EMERGENCY_CUT_OFF;
-	portEXIT_CRITICAL_ISR(&mux);
-}
-*/
 void IRAM_ATTR SensorInt(byte _sensor)
 {
 	portENTER_CRITICAL_ISR(&mux);
@@ -431,5 +439,27 @@ void IRAM_ATTR StepperTimerInterrupt()		//Stop motor
 		BluetoothPrintTxt(txt);
 	}
 }
+/*
+bool IsButtonPressed()
+{
+	bool result = false;
 
+	pinMode(BUTTONS_INTERRUPT_PIN, OUTPUT);
+	detachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN));
+	digitalWrite(BUTTONS_INTERRUPT_PIN, HIGH);
+
+	uint16_t data = analogRead(BUTTONS_READ_PIN);
+	//Serial.println(data);
+
+	if (data > 2300 && data < 3300)	//Stepper end-stop
+		result = true;
+	else
+		result = false;
+
+	pinMode(BUTTONS_INTERRUPT_PIN, INPUT);
+	attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
+
+	return result;
+}
+*/
 
