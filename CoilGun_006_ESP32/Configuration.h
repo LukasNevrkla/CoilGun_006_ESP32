@@ -18,7 +18,7 @@
 #define MAX_TIME_FOR_SENSORS 1000000
 
 const unsigned long MaxCoilTimes[USED_SENSORS + 1] =
-{ 70000,30000,COILS_OFF };
+{ 130000,35000,COILS_OFF };
 
 const byte CoilSequence[USED_SENSORS+1] =
 { 1,1,COILS_OFF}; 
@@ -34,23 +34,27 @@ struct SpeedCalculation
 #define SpeedCalcCNT 3
 
 const SpeedCalculation SpeedCalculations[SpeedCalcCNT] = {
-	{0,1,LENGTH},{2,3,LENGTH},{0,2,0.08} };
+	/*{0,1,LENGTH},{2,3,LENGTH},
+	{4,5,LENGTH},{6,7,LENGTH},
+	{8,9,LENGTH},{10,11,LENGTH},
+	{8,10,0.1} };*/
+	{0,1,LENGTH},{2,3,LENGTH},{2,4,0.1} };
 
 //////////
 //CHARGE//
 //////////
 
-#define PREDEFINED_VOLTAGE_TO_CHARGE 23.0
+#define PREDEFINED_VOLTAGE_TO_CHARGE 10.0
 #define CHARGE_FREQUENCY 20000//31000//60000	//HZ//nej 20-31khz
-#define CHARGE_PWM_ALTERNATE 130//110
+#define CHARGE_PWM_ALTERNATE 10//80//130//110
 
 /////////////////
 //STEPPER MOTOR//
 /////////////////
 
-#define STEP_CNT 150
+#define STEP_CNT 299
 #define STEPPER_START_DIRECTION FORWARD
-#define STEP_FREQUENCY 700 //Hz (max. 250kHz)
+#define STEP_FREQUENCY 250 //Hz (max. 250kHz)
 #define STEP_SLOW_FREQUENCY 400 //Hz (max. 250kHz)
 
 

@@ -81,7 +81,7 @@ void IRAM_ATTR SensorInterrupt(byte _sensor)
 	portMUX_TYPE _mux = portMUX_INITIALIZER_UNLOCKED;
 	portENTER_CRITICAL_ISR(&_mux);
 
-	Serial.println(_sensor);
+	//Serial.println(_sensor);
 
 	if (_sensor == expectedSensor)
 	{
@@ -133,7 +133,7 @@ void CalculateTimes()
 	}
 
 	Serial.println("\n\tTimes...");
-	BluetoothPrintTxt("Times...");
+	//BluetoothPrintTxt("Times...");
 
 	for (int i = 0; i < USED_SENSORS * 2; i++)
 	{
@@ -151,7 +151,7 @@ void CalculateTimes()
 		resultTimes[i] = time;
 
 		Serial.println(resultTimes[i],9);
-		BluetoothPrintTxt(String(resultTimes[i] * 1000, 3) + " ms");
+		//BluetoothPrintTxt(String(resultTimes[i] * 1000, 3) + " ms");
 		delay(20);
 	}
 
@@ -191,7 +191,7 @@ void CalculateSpeeds()
 		Serial.println(allSpeeds[i], 10);
 
 		BluetoothPrintTxt(String(allSpeeds[i], 3) + " m/s");
-		delay(10);
+		delay(30);
 	}
 
 	Serial.println();

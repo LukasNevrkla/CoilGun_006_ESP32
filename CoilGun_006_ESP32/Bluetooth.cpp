@@ -3,7 +3,8 @@
 #include "Bluetooth.h"
 
 BluetoothSerial SerialBT;
-int lastData[2];
+#define LAST_DATA_SIZE 4
+int lastData[LAST_DATA_SIZE];
 //extern double VoltageToCharge;
 
 void BluetoothInit()
@@ -21,30 +22,54 @@ void BluetoothHandle()
 	if (SerialBT.available()) //Check if we receive anything from Bluetooth
 	{
 		int data = SerialBT.read();
-		//Serial.println(data);
 
-		if (data == 'v')	//Format: xxv
+		if (data == 'v')
 		{
-			String value = "";
+			int value = BluetoothIntTxtToNumber(lastData,LAST_DATA_SIZE);
 
-			if (isDigit(lastData[0]) && isDigit(lastData[1])) 
-			{
-				//Cant be like this: value += (char)lastData[0] + (char)lastData[1];
-				value += (char)lastData[0];
-				value += (char)lastData[1];
+			EEPROM.write(EEPROM_VOLTAGE_ADRESS, value);
+			EEPROM.commit();
 
-				int data = value.toInt();
+			String txt = "Voltage to charge: " + String(value) + " V";
+			Serial.println(txt);
+			BluetoothPrintTxt(txt);
+		}
+		else if (data == 's')
+		{
+			int value = BluetoothIntTxtToNumber(lastData, LAST_DATA_SIZE);
 
-				EEPROM.write(EEPROM_VOLTAGE_ADRESS, data);
-				EEPROM.commit();
+			String txt = "PWM charging alternate is set to: " + String(value) + " %";
+			Serial.println(txt);
+			BluetoothPrintTxt(txt);
 
-				String txt = "Voltage to charge: " + String(data) + " V";
-				Serial.println(txt);
-				BluetoothPrintTxt(txt);
-			}		
+			value = ((double)value / 100) * 256;
+
+			EEPROM.write(EEPROM_CHARGE_PWM_ALTERNATE, value);
+			EEPROM.commit();
+
+			txt = "(" + String(value) + ")\n";
+			Serial.println(txt);
+			BluetoothPrintTxt(txt);
 		}
 
-		lastData[0] = lastData[1];
-		lastData[1] = data;
+		for (int i = 0; i < LAST_DATA_SIZE - 1; i++)
+			lastData[i] = lastData[i + 1];
+
+		lastData[LAST_DATA_SIZE - 1] = data;
 	}
+}
+
+int BluetoothIntTxtToNumber(int txt[], int length)
+{
+	String t = "";
+
+	for (int i = 0;i < length; i++)
+	{
+		if (isDigit(txt[i]))
+			t += (char)txt[i];
+
+		Serial.println(txt[i]);
+	}
+
+	return t.toInt();
 }

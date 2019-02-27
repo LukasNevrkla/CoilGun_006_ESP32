@@ -61,7 +61,7 @@ void PWM_Init()
 	ledcAttachPin(CHARGING_TRANSISTOR, CAPACITOR_CHARGER_PWM_CHANNEL);
 }
 
-bool MotorInit(byte &shiftRegister)
+void MotorInit(byte &shiftRegister)
 {
 	shiftRegister |= 1 << 4;	//Motor microstepping
 	shiftRegister &= ~(1 << 5);	//Motor sleep on
@@ -70,23 +70,6 @@ bool MotorInit(byte &shiftRegister)
 
 	ledcSetup(STEPPER_MOTOR_CHANNEL, STEP_FREQUENCY, 8);
 	ledcAttachPin(STEPPER_MOTOR, STEPPER_MOTOR_CHANNEL);
-
-	return true;
-	/*
-	pinMode(BUTTONS_INTERRUPT_PIN, OUTPUT);
-	//detachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN));
-	digitalWrite(BUTTONS_INTERRUPT_PIN, HIGH);
-	 
-	int data = analogRead(BUTTONS_READ_PIN);
-	if (data > 2300 && data < 3300)
-		return false;
-	else
-		return true;
-
-	Serial.println(analogRead(BUTTONS_READ_PIN));
-
-	pinMode(BUTTONS_INTERRUPT_PIN, INPUT);*/
-	//attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
 }
 
 void SetTimer(uint8_t _timer, uint64_t time, void(*interupt)(), bool reload)

@@ -30,10 +30,12 @@
 //EEPROM//
 //////////
 
-#define EEPROM_SIZE 2
+#define EEPROM_SIZE 3
 
 #define EEPROM_VOLTAGE_ADRESS 0
-#define EEPROM_IS_LOADED_ADRESS 1
+#define EEPROM_CHARGE_PWM_ALTERNATE 1
+#define EEPROM_IS_LOADED_ADRESS 2
+
 
 /////////////////
 //STEPPER MOTOR//

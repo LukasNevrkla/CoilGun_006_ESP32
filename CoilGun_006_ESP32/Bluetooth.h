@@ -9,6 +9,7 @@ extern double VoltageToCharge;
 void BluetoothInit();
 void BluetoothPrintTxt(String txt);
 void BluetoothHandle();
+int BluetoothIntTxtToNumber(int txt[], int length);
 
 
 ////gabi
