@@ -30,6 +30,16 @@ void SensorsInit(void(*_toCall_interrupt)(byte _sensor), portMUX_TYPE _mux)
 {
 	ToCall_interrupt = _toCall_interrupt;
 	//mux_second = _mux;
+
+	for (int i = 0; i < USED_SENSORS; i++)
+	{
+		if (digitalRead(SENSOR[i]) == HIGH)
+		{
+			Serial.print("Error on ");
+			Serial.print(i);
+			Serial.println(". sensor!!");
+		}
+	}
 }
 
 void SensorsStart()
@@ -37,6 +47,16 @@ void SensorsStart()
 	portMUX_TYPE _mux = portMUX_INITIALIZER_UNLOCKED;
 
 	portENTER_CRITICAL(&_mux);
+
+	for (int i = 0; i < USED_SENSORS; i++)
+	{
+		if (digitalRead(SENSOR[i]) == HIGH)
+		{
+			Serial.print("Error on ");
+			Serial.print(i);
+			Serial.println(". sensor!!");
+		}
+	}
 
 	expectedSensor = 0;
 
@@ -81,8 +101,8 @@ void IRAM_ATTR SensorInterrupt(byte _sensor)
 	portMUX_TYPE _mux = portMUX_INITIALIZER_UNLOCKED;
 	portENTER_CRITICAL_ISR(&_mux);
 
-	//Serial.println(_sensor);
-
+	Serial.println(_sensor);
+	
 	if (_sensor == expectedSensor)
 	{
 		if ((_sensor > 0 && isSecondTime) || _sensor == 0)
@@ -105,13 +125,16 @@ void IRAM_ATTR SensorInterrupt(byte _sensor)
 			isSecondTime = true;
 	}
 	else if (_sensor > expectedSensor)
-		Serial.println("Sensor error");
+	{
+		Serial.print("Sensor error ");
+		Serial.println(_sensor);
+	}
 	//This sensor has been at least one time triggered -> falling edge
 	else
 	{
 		rawTimes[_sensor * 2 + 1] = micros();	//Falling edge is odd time
 	}
-
+	
 	portEXIT_CRITICAL_ISR(&_mux);
 	//Serial.println(micros() - time);	//max 10 us
 }

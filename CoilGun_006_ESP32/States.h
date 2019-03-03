@@ -14,7 +14,6 @@
 #define SHOOT_END 7
 #define MOTOR_MOVING 8
 #define EMERGENCY_CUT_OFF 9
-
 #define MOTOR_CALIBRATION 10
 
 ////////////
@@ -54,3 +53,8 @@
 #define SHOOT_TIMER 0
 #define COILS_TIMER 1
 #define STEPPER_TIMER 2
+#define CHECK_TIMER 3
+
+#define OK 2
+#define LOW_VOLTAGE 1
+#define UNKNOWN 0

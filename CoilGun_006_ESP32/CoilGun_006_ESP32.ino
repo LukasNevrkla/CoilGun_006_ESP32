@@ -6,14 +6,15 @@
 #include "AssistantFile.h"
 #include "States.h"
 
-//1110
-
 
 byte state = WAIT;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 byte shiftRegister_1 = 0;
-bool projectileCharged = false;
-//unsigned volatile long t = 0;
+bool projectileCharged=false;
+volatile bool CheckFlag = false;
+//unsigned long _t = 0;
+
+///SENSORS ARE SWITCHED!!!!!!!!!! (PINS)
 
 void setup() 
 {
@@ -31,7 +32,10 @@ void setup()
 	attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
 	attachInterrupt(digitalPinToInterrupt(PRESSED_BUTTON_SIG), PressedButtonInterrupt, FALLING);
 
-	if (digitalRead(PRESSED_BUTTON_SIG)==HIGH)//(!IsButtonPressed())	//Motor is not in base position
+	//Serial.println(digitalRead(PRESSED_BUTTON_SIG));
+
+	projectileCharged = EEPROM.read(EEPROM_IS_LOADED_ADRESS);
+	if (digitalRead(PRESSED_BUTTON_SIG)==HIGH)	//Motor is not in base position
 	{
 		String txt = "Motor calibration";
 		Serial.println(txt);
@@ -50,6 +54,8 @@ void setup()
 		BluetoothPrintTxt(txt);
 	}
 
+	SetTimer(CHECK_TIMER, BATTERY_VOLTAGE_CHECK_INTERVAL, CheckTimerInterrupt, true);
+
 #if  !START_BY_BUTTON
 	SensorsStart();
 #endif //  !START_BY_BUTTON
@@ -57,53 +63,57 @@ void setup()
 
 void loop()
 {
-	if (state!=SHOOT)
+	if (state != SHOOT)
+	{
 		BluetoothHandle();
+
+		if (CheckFlag)
+		{
+			double _voltage = 0.0;
+			String txt;
+
+			for (int i = 0; i < 2; i++)
+				_voltage += MeasurePin(BATTERY_VOLTAGE_SENSOR, BATTERY_DIVIDER);
+
+			if (2 != 0)
+				_voltage /= 2;
+
+			/*Fully charger cell has 4,3 V*/
+
+			bool known = false;
+			for (int i = 2; i < 6; i++)
+			{
+				byte s = CheckBatteryVoltage(_voltage, i);
+
+				if (s == OK)
+				{
+					known = true;
+					//Serial.print("BATTERY VOLTAGE NOMINAL");
+				}
+				else if (s == LOW_VOLTAGE && !known)
+				{
+					txt = "LOW BATTERY VOLTAGE: " + String(_voltage) + " V";
+					Serial.println(txt);
+					BluetoothPrintTxt(txt);
+				}
+			}
+
+			if (!known)
+			{
+				txt = "Battery state unknown, voltage: " + String(_voltage) + " V";
+				Serial.println(txt);
+				BluetoothPrintTxt(txt);
+			}
+
+			portENTER_CRITICAL(&mux);
+			CheckFlag = false;
+			portEXIT_CRITICAL(&mux);
+		}
+	}
 
 	if (state == WAIT)
 	{
-		/*double voltage = 0.0;
-
-		for (int i = 0; i < MEASUREMENTS_SAMPLES; i++)
-			voltage += MeasurePin(CAPACITORS_VOLTAGE_SENSOR, CAPACITORS_DIVIDER, false);
-
-		if (MEASUREMENTS_SAMPLES != 0)
-			voltage /= MEASUREMENTS_SAMPLES;
-		Serial.print("my: ");
-		Serial.println(voltage);
-
-		voltage = 0.0;
-
-		for (int i = 0; i < MEASUREMENTS_SAMPLES; i++)
-			voltage += GetVoltage(ExactMeasurement(), CAPACITORS_DIVIDER, false);
-
-		if (MEASUREMENTS_SAMPLES != 0)
-			voltage /= MEASUREMENTS_SAMPLES;
-		Serial.print("exact: ");
-		Serial.println(voltage);*/
-		/*
-		Serial.println("RAW");
-
-		Serial.print(GetDividerVoltage(analogRead(CAPACITORS_VOLTAGE_SENSOR)));
-		Serial.print("  \t "); 
-		Serial.println(GetDividerVoltage(analogRead(BATTERY_VOLTAGE_SENSOR)));
-		*/
-		/*
-		double voltage = 0.0;
-
-		for (int i = 0; i < MEASUREMENTS_SAMPLES; i++)
-			voltage += MeasurePin(CAPACITORS_VOLTAGE_SENSOR, CAPACITORS_DIVIDER, true);
-
-		if (MEASUREMENTS_SAMPLES != 0)
-			voltage /= MEASUREMENTS_SAMPLES;
-
-		Serial.println(voltage);*/
 		
-		//Serial.print(MeasurePin(CAPACITORS_VOLTAGE_SENSOR, CAPACITORS_DIVIDER, false));
-		//Serial.print(" \t ");
-		//Serial.println(MeasurePin(BATTERY_VOLTAGE_SENSOR, BATTERY_DIVIDER, false));
-		
-		//delay(1000);
 	}
 	else if (state == CHARGE_START)
 	{
@@ -111,16 +121,19 @@ void loop()
 		Serial.println(txt);
 		BluetoothPrintTxt(txt);
 
-		shiftRegister_1 |= 0b00000011;	//Rele on
+		shiftRegister_1 |= 0b11000000;	//Rele on
 		shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, LSBFIRST, shiftRegister_1);
 
-		delay(200);	//wait for rele
+		delay(300);	//wait for rele
 
 		if (!projectileCharged)
 		{
-			MotorStart(FORWARD,shiftRegister_1,STEP_FREQUENCY);
 			SetTimer(STEPPER_TIMER, (uint64_t)(((double)1 / STEP_FREQUENCY) * 1000000 * STEP_CNT),
 				StepperTimerInterrupt, false);
+			MotorStart(FORWARD,shiftRegister_1,STEP_FREQUENCY);
+
+			//Serial.println(STEPPER_TIMER, (uint64_t)(((double)1 / STEP_FREQUENCY) * 1000000 * STEP_CNT));
+			//_t = millis();
 		}
 
 		ledcWrite(CAPACITOR_CHARGER_PWM_CHANNEL, EEPROM.read(EEPROM_CHARGE_PWM_ALTERNATE));//CHARGE_PWM_ALTERNATE);
@@ -134,7 +147,7 @@ void loop()
 		double voltage=0.0;
 
 		for (int i = 0; i < MEASUREMENTS_SAMPLES; i++)
-			voltage+= MeasurePin(CAPACITORS_VOLTAGE_SENSOR, CAPACITORS_DIVIDER, true);
+			voltage+= MeasurePin(CAPACITORS_VOLTAGE_SENSOR, CAPACITORS_DIVIDER);
 
 		if (MEASUREMENTS_SAMPLES != 0)
 			voltage /= MEASUREMENTS_SAMPLES;
@@ -157,7 +170,7 @@ void loop()
 
 			ledcWrite(CAPACITOR_CHARGER_PWM_CHANNEL, 0);
 
-			shiftRegister_1 &= ~0b00000011;		//Turn rele off
+			shiftRegister_1 &= ~0b11000000;		//Turn rele off
 			shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, LSBFIRST, shiftRegister_1);
 
 			portENTER_CRITICAL(&mux);
@@ -188,11 +201,14 @@ void loop()
 		Serial.println(txt);
 		BluetoothPrintTxt(txt);
 
+		SetTimer(CHECK_TIMER, 1, CheckTimerInterrupt, false);	//Last check
+		delayMicroseconds(1);
+
 #if START_BY_BUTTON
 		SensorsStart();		
 #endif
 
-		shiftRegister_1 &= ~0b00000011;
+		shiftRegister_1 &= ~0b11000000;
 		shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, LSBFIRST, shiftRegister_1);
 
 		portENTER_CRITICAL(&mux);
@@ -237,6 +253,8 @@ void loop()
 		SensorsEnd();
 
 		delay(10);
+
+		SetTimer(CHECK_TIMER, BATTERY_VOLTAGE_CHECK_INTERVAL, CheckTimerInterrupt, true);	//Start checking
 	}
 	else if (state == EMERGENCY_CUT_OFF)
 	{
@@ -311,8 +329,11 @@ void IRAM_ATTR ButtonInterrupt()
 	attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
 }
 
-void IRAM_ATTR PressedButtonInterrupt()
+void IRAM_ATTR PressedButtonInterrupt()	//!!!!!!!!!!!!!!
 {
+	//String txt = "Mx";
+	//Serial.println(txt);
+
 	if (state == MOTOR_CALIBRATION)
 	{
 		MotorStop(shiftRegister_1);
@@ -321,7 +342,11 @@ void IRAM_ATTR PressedButtonInterrupt()
 		Serial.println(txt);
 		BluetoothPrintTxt(txt);
 
+		portENTER_CRITICAL_ISR(&mux);
 		projectileCharged = false;
+		EEPROM.write(EEPROM_IS_LOADED_ADRESS, false);
+		EEPROM.commit();
+		portEXIT_CRITICAL_ISR(&mux);
 
 		portENTER_CRITICAL_ISR(&mux);
 		state = WAIT;
@@ -372,7 +397,14 @@ void IRAM_ATTR CoilsTimerInterrupt()
 void IRAM_ATTR StepperTimerInterrupt()		//Stop motor
 {
 	MotorStop(shiftRegister_1);
-	projectileCharged = true;//!projectileCharged;
+
+	//Serial.println(millis() - _t);
+
+	portENTER_CRITICAL_ISR(&mux);
+	projectileCharged = true;
+	EEPROM.write(EEPROM_IS_LOADED_ADRESS, true);
+	EEPROM.commit();
+	portEXIT_CRITICAL_ISR(&mux);
 
 	//if (projectileCharged)
 	//{
@@ -381,27 +413,10 @@ void IRAM_ATTR StepperTimerInterrupt()		//Stop motor
 		BluetoothPrintTxt(txt);
 	//}
 }
-/*
-bool IsButtonPressed()
+
+void IRAM_ATTR CheckTimerInterrupt()
 {
-	bool result = false;
-
-	pinMode(BUTTONS_INTERRUPT_PIN, OUTPUT);
-	detachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN));
-	digitalWrite(BUTTONS_INTERRUPT_PIN, HIGH);
-
-	uint16_t data = analogRead(BUTTONS_READ_PIN);
-	//Serial.println(data);
-
-	if (data > 2300 && data < 3300)	//Stepper end-stop
-		result = true;
-	else
-		result = false;
-
-	pinMode(BUTTONS_INTERRUPT_PIN, INPUT);
-	attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
-
-	return result;
+	portENTER_CRITICAL_ISR(&mux);
+	CheckFlag = true;
+	portEXIT_CRITICAL_ISR(&mux);
 }
-*/
-

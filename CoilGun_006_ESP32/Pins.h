@@ -8,7 +8,7 @@
 #ifdef CG_v1
 
 const byte COIL[ALL_COILS] = { 4,4,4,4,4,4};
-const byte SENSOR[ALL_SENSORS] = { 23,22,1,3,21,19 };
+const byte SENSOR[ALL_SENSORS] = { 23,22,21,19,1,3};//{ 23,22,1,3,21,19 }; Sensors are switched!!!!!!!!!!!!!!!!!!!!!!
 
 #define BUTTONS_INTERRUPT_PIN 32
 #define BUTTONS_READ_PIN 35

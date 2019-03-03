@@ -6,7 +6,7 @@ hw_timer_t * Timers[4] = { NULL,NULL,NULL,NULL };
 void PinsInit()
 {
 	for (byte i = 0; i < ALL_SENSORS; i++)
-		pinMode(SENSOR[i], INPUT_PULLDOWN);
+		pinMode(SENSOR[i], INPUT_PULLUP);
 
 	for (byte i = 0; i < ALL_COILS; i++)
 	{
@@ -53,6 +53,14 @@ void EEPROM_Init()
 		EEPROM.write(EEPROM_VOLTAGE_ADRESS, PREDEFINED_VOLTAGE_TO_CHARGE);
 		EEPROM.commit();
 	}
+
+	byte isLoaded = EEPROM.read(EEPROM_IS_LOADED_ADRESS);
+
+	if (isLoaded != 1 && isLoaded != 0)
+	{
+		EEPROM.write(EEPROM_IS_LOADED_ADRESS, false);
+		EEPROM.commit();
+	}
 }
 
 void PWM_Init()
@@ -72,7 +80,7 @@ void MotorInit(byte &shiftRegister)
 	ledcAttachPin(STEPPER_MOTOR, STEPPER_MOTOR_CHANNEL);
 }
 
-void SetTimer(uint8_t _timer, uint64_t time, void(*interupt)(), bool reload)
+void SetTimer(uint8_t _timer, uint64_t time, void(*interupt)(), bool reload)		//time in us
 {
 	//Timer interrupt  https://techtutorialsx.com/2017/10/07/esp32-arduino-timer-interrupts/
 	Timers[_timer] = timerBegin(_timer, 80, true);
@@ -96,11 +104,24 @@ void MotorStart(bool _direction, byte &shiftRegister, double stepFrequency)
 	ledcAttachPin(STEPPER_MOTOR, STEPPER_MOTOR_CHANNEL);
 	ledcWrite(STEPPER_MOTOR_CHANNEL, 126);
 }
+
 void MotorStop(byte &shiftRegister)
 {
 	shiftRegister &= ~(1 << 5);	//Motor sleep on
 
 	shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, MSBFIRST, shiftRegister);
 	ledcWrite(STEPPER_MOTOR_CHANNEL, 0);
+}
+
+byte CheckBatteryVoltage(double voltage, byte cells)
+{
+	if (voltage <= 4.3*cells && voltage>5)
+	{
+		if (voltage < BATTERY_MIN_VOLTAGE_PER_CELL*cells)
+			return LOW;
+		else
+			return OK;
+	}
+	return UNKNOWN;
 }
 
