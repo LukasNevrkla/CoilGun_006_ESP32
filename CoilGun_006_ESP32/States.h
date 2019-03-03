@@ -58,3 +58,14 @@
 #define OK 2
 #define LOW_VOLTAGE 1
 #define UNKNOWN 0
+
+/////////
+//FLAGS//
+/////////
+
+#define FLAG_CNT 4
+
+#define BUTTON_FLAG 0
+#define PRESSED_BUTTON_FLAG 1
+#define STEPPER_TIMER_FLAG 2
+#define CHECK_TIMER_FLAG 3

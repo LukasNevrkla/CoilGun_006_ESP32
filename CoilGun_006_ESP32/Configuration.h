@@ -54,7 +54,7 @@ const SpeedCalculation SpeedCalculations[SpeedCalcCNT] = {
 
 #define STEP_CNT 299
 #define STEPPER_START_DIRECTION FORWARD
-#define STEP_FREQUENCY 250 //Hz (max. 250kHz)
+#define STEP_FREQUENCY 100//250 //Hz (max. 250kHz)
 #define STEP_SLOW_FREQUENCY 400 //Hz (max. 250kHz)
 
 

@@ -11,7 +11,10 @@ byte state = WAIT;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 byte shiftRegister_1 = 0;
 bool projectileCharged=false;
-volatile bool CheckFlag = false;
+//volatile bool CheckFlag = false;
+volatile bool Flags[FLAG_CNT] = { 0 };
+bool DontExpectDetection = false;
+
 //unsigned long _t = 0;
 
 ///SENSORS ARE SWITCHED!!!!!!!!!! (PINS)
@@ -67,7 +70,99 @@ void loop()
 	{
 		BluetoothHandle();
 
-		if (CheckFlag)
+		if (Flags[BUTTON_FLAG])
+		{
+			pinMode(BUTTONS_INTERRUPT_PIN, OUTPUT);
+			detachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN));
+
+			digitalWrite(BUTTONS_INTERRUPT_PIN, HIGH);
+
+			uint16_t raw = 0;
+			byte samples = 1;
+
+			for (int i = 0; i < samples; i++)
+				raw += analogRead(BUTTONS_READ_PIN);
+
+			raw /= samples;
+
+			portENTER_CRITICAL(&mux);
+
+			if (raw > 900 && raw < 1300)
+			{
+				if (state == WAIT)
+					state = CHARGE_START;
+				else if (state == CHARGE_DONE)
+					state = SHOOT_START;
+			}
+			else if (raw > 1600 && raw < 2000)
+			{
+				state = EMERGENCY_CUT_OFF;
+			}
+			else if (raw > 2300 && raw < 3300)	//Stepper end-stop
+			{
+			}
+			else if (raw > 3300 && raw < 3400)
+				Serial.println("4");
+			else if (raw > 3500 && raw < 3900)
+				Serial.println("5");
+			else{}
+			portEXIT_CRITICAL(&mux);
+
+			pinMode(BUTTONS_INTERRUPT_PIN, INPUT);
+			attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
+
+			portENTER_CRITICAL(&mux);
+			Flags[BUTTON_FLAG] = false;
+			portEXIT_CRITICAL(&mux);
+		}
+		if (Flags[PRESSED_BUTTON_FLAG])
+		{
+			if (state == MOTOR_CALIBRATION && !DontExpectDetection)
+			{
+				MotorStop(shiftRegister_1);
+
+				String txt = "Motor calibrated";
+				Serial.println(txt);
+				BluetoothPrintTxt(txt);
+
+				portENTER_CRITICAL(&mux);
+				projectileCharged = false;
+				portEXIT_CRITICAL(&mux);
+
+				EEPROM.write(EEPROM_IS_LOADED_ADRESS, 0);//false
+				EEPROM.commit();
+
+				portENTER_CRITICAL(&mux);
+				state = WAIT;
+				portEXIT_CRITICAL(&mux);
+			}
+
+			portENTER_CRITICAL(&mux);
+			Flags[PRESSED_BUTTON_FLAG] = false;
+			portEXIT_CRITICAL(&mux);
+		}
+		if (Flags[STEPPER_TIMER_FLAG])
+		{
+			MotorStop(shiftRegister_1);
+
+			portENTER_CRITICAL(&mux);
+			projectileCharged = true;
+			portEXIT_CRITICAL(&mux);
+
+			EEPROM.write(EEPROM_IS_LOADED_ADRESS, 1);//false
+			EEPROM.commit();
+
+			String txt = "Projectile charging complete";
+			Serial.println(txt);
+			BluetoothPrintTxt(txt);
+
+			portENTER_CRITICAL(&mux);
+			Flags[STEPPER_TIMER_FLAG] = false;
+			portEXIT_CRITICAL(&mux);
+
+			DontExpectDetection = false;
+		}
+		if (Flags[CHECK_TIMER_FLAG])
 		{
 			double _voltage = 0.0;
 			String txt;
@@ -78,18 +173,14 @@ void loop()
 			if (2 != 0)
 				_voltage /= 2;
 
-			/*Fully charger cell has 4,3 V*/
-
+			//Fully charger cell has 4,3 V
 			bool known = false;
 			for (int i = 2; i < 6; i++)
 			{
 				byte s = CheckBatteryVoltage(_voltage, i);
 
 				if (s == OK)
-				{
 					known = true;
-					//Serial.print("BATTERY VOLTAGE NOMINAL");
-				}
 				else if (s == LOW_VOLTAGE && !known)
 				{
 					txt = "LOW BATTERY VOLTAGE: " + String(_voltage) + " V";
@@ -106,9 +197,9 @@ void loop()
 			}
 
 			portENTER_CRITICAL(&mux);
-			CheckFlag = false;
+			Flags[CHECK_TIMER_FLAG] = false;
 			portEXIT_CRITICAL(&mux);
-		}
+		}	
 	}
 
 	if (state == WAIT)
@@ -121,8 +212,8 @@ void loop()
 		Serial.println(txt);
 		BluetoothPrintTxt(txt);
 
-		shiftRegister_1 |= 0b11000000;	//Rele on
-		shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, LSBFIRST, shiftRegister_1);
+		shiftRegister_1 |= 0b00000011; //0b11000000;	//Rele on
+		shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, MSBFIRST, shiftRegister_1);
 
 		delay(300);	//wait for rele
 
@@ -132,11 +223,13 @@ void loop()
 				StepperTimerInterrupt, false);
 			MotorStart(FORWARD,shiftRegister_1,STEP_FREQUENCY);
 
-			//Serial.println(STEPPER_TIMER, (uint64_t)(((double)1 / STEP_FREQUENCY) * 1000000 * STEP_CNT));
+			DontExpectDetection = true;
+
+			//Serial.println((((double)1 / STEP_FREQUENCY) * 1000000 * STEP_CNT));
 			//_t = millis();
 		}
 
-		ledcWrite(CAPACITOR_CHARGER_PWM_CHANNEL, EEPROM.read(EEPROM_CHARGE_PWM_ALTERNATE));//CHARGE_PWM_ALTERNATE);
+		//ledcWrite(CAPACITOR_CHARGER_PWM_CHANNEL, EEPROM.read(EEPROM_CHARGE_PWM_ALTERNATE));//CHARGE_PWM_ALTERNATE);
 
 		portENTER_CRITICAL(&mux);
 		state = CHARGING;
@@ -164,18 +257,18 @@ void loop()
 		}
 		else
 		{
+			portENTER_CRITICAL(&mux);
+			state = CHARGE_ALMOST_DONE;
+			portEXIT_CRITICAL(&mux);
+
 			String txt = "capacitors charging complete";
 			Serial.println(txt);
 			BluetoothPrintTxt(txt);
 
 			ledcWrite(CAPACITOR_CHARGER_PWM_CHANNEL, 0);
 
-			shiftRegister_1 &= ~0b11000000;		//Turn rele off
-			shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, LSBFIRST, shiftRegister_1);
-
-			portENTER_CRITICAL(&mux);
-			state = CHARGE_ALMOST_DONE;
-			portEXIT_CRITICAL(&mux);
+			shiftRegister_1 &= ~0b00000011;		//Turn rele off
+			shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, MSBFIRST, shiftRegister_1);
 		}
 	}
 	else if (state == CHARGE_ALMOST_DONE)
@@ -208,8 +301,8 @@ void loop()
 		SensorsStart();		
 #endif
 
-		shiftRegister_1 &= ~0b11000000;
-		shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, LSBFIRST, shiftRegister_1);
+		shiftRegister_1 &= ~0b00000011;
+		shiftOut(SHIFT_REG_1_DATA, SHIFT_REG_1_CLC, MSBFIRST, shiftRegister_1);
 
 		portENTER_CRITICAL(&mux);
 		state = SHOOT;
@@ -218,7 +311,7 @@ void loop()
 		digitalWrite(SHIFT_REG_0_MR, HIGH);
 		digitalWrite(SHIFT_REG_0_DATA, HIGH);
 			
-		SetTimer(SHOOT_TIMER, MAX_TIME_FOR_SENSORS, ShootTimerInterrupt,false);
+		SetTimer(SHOOT_TIMER, MAX_TIME_FOR_SENSORS, ShootTimerInterrupt, false);
 		SetTimer(COILS_TIMER, MaxCoilTimes[0], CoilsTimerInterrupt, false);
 		
 		//Coil I... on
@@ -282,76 +375,16 @@ void loop()
 
 void IRAM_ATTR ButtonInterrupt()
 {
-	pinMode(BUTTONS_INTERRUPT_PIN, OUTPUT);
-	detachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN));
-
-	digitalWrite(BUTTONS_INTERRUPT_PIN, HIGH);
-
-	uint16_t raw = 0;
-	byte samples = 1;
-
-	for (int i = 0; i < samples; i++)
-		raw += analogRead(BUTTONS_READ_PIN);
-
-	raw /= samples;
-
-	//Serial.println(raw);
-
 	portENTER_CRITICAL_ISR(&mux);
-
-	if (raw > 900 && raw < 1300)
-	{
-		if (state==WAIT)
-			state = CHARGE_START;
-		else if (state==CHARGE_DONE)
-			state = SHOOT_START;
-	}
-	else if (raw > 1600 && raw < 2000)
-	{
-		//Serial.println("CUTT OFF");
-		state = EMERGENCY_CUT_OFF;
-	}
-	else if (raw > 2300 && raw < 3300)	//Stepper end-stop
-	{
-	}
-	else if (raw > 3300 && raw < 3400)
-		Serial.println("4");
-	else if (raw > 3500 && raw < 3900)
-		Serial.println("5");
-	else
-	{
-	}
-
+	Flags[BUTTON_FLAG] = true;
 	portEXIT_CRITICAL_ISR(&mux);
-
-	//digitalWrite(BUTTONS_INTERRUPT_PIN, LOW);
-	pinMode(BUTTONS_INTERRUPT_PIN, INPUT);
-	attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
 }
 
-void IRAM_ATTR PressedButtonInterrupt()	//!!!!!!!!!!!!!!
+void IRAM_ATTR PressedButtonInterrupt()	
 {
-	//String txt = "Mx";
-	//Serial.println(txt);
-
-	if (state == MOTOR_CALIBRATION)
-	{
-		MotorStop(shiftRegister_1);
-
-		String txt = "Motor calibrated";
-		Serial.println(txt);
-		BluetoothPrintTxt(txt);
-
-		portENTER_CRITICAL_ISR(&mux);
-		projectileCharged = false;
-		EEPROM.write(EEPROM_IS_LOADED_ADRESS, false);
-		EEPROM.commit();
-		portEXIT_CRITICAL_ISR(&mux);
-
-		portENTER_CRITICAL_ISR(&mux);
-		state = WAIT;
-		portEXIT_CRITICAL_ISR(&mux);
-	}
+	portENTER_CRITICAL_ISR(&mux);
+	Flags[PRESSED_BUTTON_FLAG] = true;
+	portEXIT_CRITICAL_ISR(&mux);
 }
 
 void IRAM_ATTR SensorInt(byte _sensor)
@@ -377,9 +410,7 @@ void IRAM_ATTR SensorInt(byte _sensor)
 void IRAM_ATTR ShootTimerInterrupt()
 {
 	portENTER_CRITICAL_ISR(&mux);
-
 	state = SHOOT_END;
-
 	portEXIT_CRITICAL_ISR(&mux);
 }
 
@@ -396,27 +427,16 @@ void IRAM_ATTR CoilsTimerInterrupt()
 
 void IRAM_ATTR StepperTimerInterrupt()		//Stop motor
 {
-	MotorStop(shiftRegister_1);
-
-	//Serial.println(millis() - _t);
+	//Serial.println(millis()-_t);
 
 	portENTER_CRITICAL_ISR(&mux);
-	projectileCharged = true;
-	EEPROM.write(EEPROM_IS_LOADED_ADRESS, true);
-	EEPROM.commit();
+	Flags[STEPPER_TIMER_FLAG] = true;
 	portEXIT_CRITICAL_ISR(&mux);
-
-	//if (projectileCharged)
-	//{
-		String txt = "Projectile charging complete";
-		Serial.println(txt);
-		BluetoothPrintTxt(txt);
-	//}
 }
 
 void IRAM_ATTR CheckTimerInterrupt()
 {
 	portENTER_CRITICAL_ISR(&mux);
-	CheckFlag = true;
+	Flags[CHECK_TIMER_FLAG] = true;
 	portEXIT_CRITICAL_ISR(&mux);
 }
