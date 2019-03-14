@@ -168,6 +168,8 @@ void CalculateTimes()
 	#else 
 		time = (double)(rawTimes[i] - rawTimes[0]);	//First time ll be 0
 	#endif
+
+		rawTimes[i] = 0;
 		portEXIT_CRITICAL(&_mux);
 
 		time /= 1000000.0;	//To seconds

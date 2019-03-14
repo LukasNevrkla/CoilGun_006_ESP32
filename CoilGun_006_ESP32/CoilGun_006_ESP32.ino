@@ -17,7 +17,6 @@ bool DontExpectDetection = false;
 
 //unsigned long _t = 0;
 
-///SENSORS ARE SWITCHED!!!!!!!!!! (PINS)
 
 void setup() 
 {
@@ -34,6 +33,7 @@ void setup()
 
 	attachInterrupt(digitalPinToInterrupt(BUTTONS_INTERRUPT_PIN), ButtonInterrupt, FALLING);
 	attachInterrupt(digitalPinToInterrupt(PRESSED_BUTTON_SIG), PressedButtonInterrupt, FALLING);
+
 
 	//Serial.println(digitalRead(PRESSED_BUTTON_SIG));
 
@@ -396,6 +396,8 @@ void IRAM_ATTR SensorInt(byte _sensor)
 		SetTimer(SHOOT_TIMER, MAX_TIME_FOR_SENSORS, ShootEnd, false);
 #endif
 
+	//Serial.println(_sensor);
+
 	if (CoilSequence[_sensor + 1] != COILS_OFF && MaxCoilTimes[_sensor + 1] != COILS_OFF)
 	{
 		digitalWrite(SHIFT_REG_0_CLC, HIGH);
@@ -418,9 +420,8 @@ void IRAM_ATTR CoilsTimerInterrupt()
 {
 	portENTER_CRITICAL_ISR(&mux);
 
+	digitalWrite(SHIFT_REG_0_MR, LOW);	//Stop all coils
 	Serial.println("COILS_OFF");
-	
-	digitalWrite(SHIFT_REG_0_MR, LOW);	//TurnNextCoil
 
 	portEXIT_CRITICAL_ISR(&mux);
 }	//Warning 
