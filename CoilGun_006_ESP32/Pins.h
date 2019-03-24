@@ -8,7 +8,7 @@
 #ifdef CG_v1
 
 const byte COIL[ALL_COILS] = { 4,4,4,4,4,4};
-const byte SENSOR[ALL_SENSORS] = { 23,22,3,1,21,19 };//{ 23,22,1,3,21,19 };
+const byte SENSOR[ALL_SENSORS] = { 19,21,3,1,22,23 };	//{ 23,22,1,3,21,19 };
 
 #define BUTTONS_INTERRUPT_PIN 32
 #define BUTTONS_READ_PIN 35

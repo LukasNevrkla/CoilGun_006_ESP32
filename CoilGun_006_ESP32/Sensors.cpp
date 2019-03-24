@@ -126,7 +126,7 @@ void IRAM_ATTR SensorInterrupt(byte _sensor)
 	}
 	else if (_sensor > expectedSensor)
 	{
-		Serial.print("Sensor error ");
+		Serial.print("S err ");
 		Serial.println(_sensor);
 	}
 	//This sensor has been at least one time triggered -> falling edge
@@ -176,7 +176,7 @@ void CalculateTimes()
 		resultTimes[i] = time;
 
 		Serial.println(resultTimes[i],9);
-		//BluetoothPrintTxt(String(resultTimes[i] * 1000, 3) + " ms");
+		BluetoothPrintTxt(String(resultTimes[i], 6)); //+ " ms");
 		delay(20);
 	}
 
@@ -186,7 +186,7 @@ void CalculateTimes()
 void CalculateSpeeds()
 {
 	Serial.println("\nSpeeds between times ...\n");
-	BluetoothPrintTxt("Speeds...");
+	//BluetoothPrintTxt("Speeds...");
 
 	for (int i = 0; i < SpeedCalcCNT; i++)
 	{
@@ -215,7 +215,7 @@ void CalculateSpeeds()
 		allSpeeds[i] = speed;
 		Serial.println(allSpeeds[i], 10);
 
-		BluetoothPrintTxt(String(allSpeeds[i], 3) + " m/s");
+		BluetoothPrintTxt(String(allSpeeds[i], 6)); //+ " m/s");
 		delay(30);
 	}
 

@@ -7,7 +7,7 @@
 //Shoot//
 /////////
 
-#define USED_COILS 1
+#define USED_COILS 2
 #define USED_SENSORS 3
 
 #define ALL_COILS 6
