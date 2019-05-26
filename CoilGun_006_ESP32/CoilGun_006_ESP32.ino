@@ -253,6 +253,8 @@ void loop()
 
 		if (voltage <= EEPROM.read(EEPROM_VOLTAGE_ADRESS))
 		{
+			//ledcSetup(CAPACITOR_CHARGER_PWM_CHANNEL, (double)EEPROM.read(EEPROM_CHARGE_PWM_FREQUENCY) * 1000.0, 8);
+			//ledcAttachPin(CHARGING_TRANSISTOR, CAPACITOR_CHARGER_PWM_CHANNEL);
 			ledcWrite(CAPACITOR_CHARGER_PWM_CHANNEL, EEPROM.read(EEPROM_CHARGE_PWM_ALTERNATE));
 		}
 		else
@@ -327,6 +329,11 @@ void loop()
 	else if (state == SHOOT_END)
 	{
 		digitalWrite(SHIFT_REG_0_MR, LOW);
+		shiftRegister_1 |= 0b00000011;	//Relay on (for measurement)
+
+		delay(200);
+
+		SensorsEnd();
 
 		if (projectileCharged)
 		{
@@ -343,7 +350,18 @@ void loop()
 			portEXIT_CRITICAL(&mux);
 		}
 
-		SensorsEnd();
+		double voltage = 0.0;
+
+		for (int i = 0; i < MEASUREMENTS_SAMPLES; i++)
+			voltage += MeasurePin(CAPACITORS_VOLTAGE_SENSOR, CAPACITORS_DIVIDER);
+
+		if (MEASUREMENTS_SAMPLES != 0)
+			voltage /= MEASUREMENTS_SAMPLES;
+
+		shiftRegister_1 &= ~0b00000011;		//Turn rele off
+
+		String txt = "Remaining voltage: " + String(voltage) + " V";
+		BluetoothPrintTxt(txt);
 
 		delay(10);
 

@@ -7,8 +7,8 @@
 //Shoot//
 /////////
 
-#define USED_COILS 2
-#define USED_SENSORS 3
+#define USED_COILS 4
+#define USED_SENSORS 5
 
 #define ALL_COILS 6
 #define ALL_SENSORS 6
@@ -17,11 +17,13 @@
 
 #define MAX_TIME_FOR_SENSORS 1000000
 
+//New coil...time, sequence, cnt
+
 const unsigned long MaxCoilTimes[USED_SENSORS + 1] =
-{ 130000, 35000,COILS_OFF };
+{ 100000, 35000,15000,10000,COILS_OFF };
 
 const byte CoilSequence[USED_SENSORS+1] =
-{1,1,COILS_OFF}; 
+{1,1,1,1,COILS_OFF}; 
 
 
 //!!!!!!!!Switvhed sensor 3 and 4
@@ -35,12 +37,14 @@ struct SpeedCalculation
 	double distance;
 };
 
-#define SpeedCalcCNT 3
+#define SpeedCalcCNT 6
 
 const SpeedCalculation SpeedCalculations[SpeedCalcCNT] = {
 	{0,1,LENGTH},{2,3,LENGTH},
-	{4,5,LENGTH} };//{6,7,LENGTH},
-	//{4,6,0.04} };
+	{4,5,LENGTH},{6,7,LENGTH},
+	{8,9,LENGTH},//{10,11,LENGTH},
+	//{8,10,0.09} };
+	{6,8,0.09} };
 	//{0,1,LENGTH},{2,3,LENGTH},{0,2,0.07} };
 
 

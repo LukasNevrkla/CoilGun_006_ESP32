@@ -26,6 +26,24 @@ double allSpeeds[SpeedCalcCNT];
 volatile bool isSecondTime = false;
 
 
+//* test times
+
+bool print_test_times = false;
+
+#define SAMPLES 45
+byte allT_cnt = 0;
+
+struct test_times
+{
+	unsigned volatile long rawTimes;
+	byte sensor;
+};
+
+test_times t_t [SAMPLES];
+
+//
+
+
 void SensorsInit(void(*_toCall_interrupt)(byte _sensor), portMUX_TYPE _mux)
 {
 	ToCall_interrupt = _toCall_interrupt;
@@ -40,6 +58,11 @@ void SensorsInit(void(*_toCall_interrupt)(byte _sensor), portMUX_TYPE _mux)
 			Serial.println(". sensor!!");
 		}
 	}
+
+	if (EEPROM.read(EEPROM_PRINT_ALL_TIMES) == 1)
+		print_test_times = true;
+	else
+		print_test_times = false;
 }
 
 void SensorsStart()
@@ -57,6 +80,11 @@ void SensorsStart()
 			Serial.println(". sensor!!");
 		}
 	}
+
+	if (EEPROM.read(EEPROM_PRINT_ALL_TIMES) == 1)
+		print_test_times = true;
+	else
+		print_test_times = false;
 
 	expectedSensor = 0;
 
@@ -101,7 +129,21 @@ void IRAM_ATTR SensorInterrupt(byte _sensor)
 	portMUX_TYPE _mux = portMUX_INITIALIZER_UNLOCKED;
 	portENTER_CRITICAL_ISR(&_mux);
 
-	Serial.println(_sensor);
+	//Serial.println(_sensor);
+
+
+	//* test times
+	if (print_test_times)
+	{
+		if (allT_cnt < SAMPLES)
+		{
+			t_t[allT_cnt].rawTimes = micros();
+			t_t[allT_cnt].sensor = _sensor;
+			allT_cnt++;
+		}
+	}
+	//
+
 	
 	if (_sensor == expectedSensor)
 	{
@@ -181,6 +223,26 @@ void CalculateTimes()
 	}
 
 	BluetoothPrintTxt("");
+
+
+	// * test times
+	if (print_test_times)
+	{
+		BluetoothPrintTxt("ALL RAW TEST TIMES: \n");
+
+		for (int i = 0; i < allT_cnt; i++)
+		{
+			t_t[i].rawTimes = t_t[i].rawTimes - t;
+			BluetoothPrintTxt(String(t_t[i].rawTimes));
+			delay(20);
+			BluetoothPrintTxt(String(t_t[i].sensor));
+			delay(20);
+			t_t[i].rawTimes = 0;
+		}
+		allT_cnt = 0;
+		BluetoothPrintTxt("");
+	}
+	//
 }
 
 void CalculateSpeeds()

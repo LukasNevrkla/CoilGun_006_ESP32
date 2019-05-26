@@ -29,11 +29,13 @@
 //EEPROM//
 //////////
 
-#define EEPROM_SIZE 3
+#define EEPROM_SIZE 5	//predelat na enum
 
 #define EEPROM_VOLTAGE_ADRESS 0
 #define EEPROM_CHARGE_PWM_ALTERNATE 1
 #define EEPROM_IS_LOADED_ADRESS 2
+#define EEPROM_CHARGE_PWM_FREQUENCY 3
+#define EEPROM_PRINT_ALL_TIMES 4
 
 
 /////////////////
